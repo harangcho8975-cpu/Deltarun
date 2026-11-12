@@ -1,0 +1,28 @@
+{
+  "id": "stage_test",
+  "name": "테스트 맵",
+  "length": 6000,
+  "speed": 300,
+  "bgm": "bgm_stage1",
+  "background": ["bg_far", "bg_mid", "bg_near"],
+  "ground": [[0, 3200], [3360, 6000]],
+  "obstacles": [
+    { "type": "obstacle_low", "x": 1200 },
+    { "type": "obstacle_high", "x": 2000 },
+    { "type": "obstacle_air", "x": 2700 },
+    { "type": "obstacle_low", "x": 4200 }
+  ],
+  "jellies": [
+    { "type": "jelly_normal", "x": 600, "y": 560 },
+    { "type": "jelly_normal", "x": 640, "y": 560 },
+    { "type": "jelly_normal", "x": 680, "y": 560 },
+    { "type": "jelly_big", "x": 900, "y": 540 },
+    { "type": "coin", "x": 1224, "y": 430 }
+  ],
+  "items": [
+    { "type": "item_heal", "x": 3800, "y": 540 },
+    { "type": "item_magnet", "x": 4800, "y": 540 }
+  ],
+  "goalX": 5800,
+  "stars": [0.5, 0.75, 0.95]
+}
