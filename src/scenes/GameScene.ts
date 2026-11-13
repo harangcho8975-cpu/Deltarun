@@ -9,6 +9,7 @@ import { params } from '../debug/params';
 import { InputController } from '../input/InputController';
 import { WorldRenderer, type RenderSnapshot } from '../render/WorldRenderer';
 import { createSim, ReplayRecorder, starsFor, step, totalScore, type SimEvent, type SimState } from '../sim';
+import { fullscreen } from '../ui/fullscreen';
 import { text } from '../ui/style';
 
 export interface RunResultData {
@@ -81,6 +82,7 @@ export class GameScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       if (ev.code === 'Escape' || ev.code === 'KeyP') this.setPaused(!this.paused);
+      if (ev.code === 'KeyF') void fullscreen.toggle();
     });
     const onVisibility = () => document.hidden && this.setPaused(true);
     const onOrientation = () => this.portraitMq.matches && this.setPaused(true);

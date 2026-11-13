@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameConfig as cfg, TICK_RATE } from '../config/gameConfig';
 import { PAUSE_AREA, type InputController } from '../input/InputController';
 import { totalScore, type SimState } from '../sim';
+import { fullscreen } from '../ui/fullscreen';
 import { button, COLORS, text } from '../ui/style';
 import type { GameScene } from './GameScene';
 
@@ -77,7 +78,11 @@ export class UIScene extends Phaser.Scene {
     const resume = button(this, 640, 320, 320, 76, '계속하기', () => this.game_.setPaused(false));
     const retry = button(this, 640, 420, 320, 76, '다시 시작', () => this.game_.restart(), 0xdfe6f5);
     const quit = button(this, 640, 520, 320, 76, '스테이지 목록', () => this.game_.quit(), 0xdfe6f5);
-    return this.add.container(0, 0, [dim, title, resume, retry, quit]).setDepth(100);
+    const items: Phaser.GameObjects.GameObject[] = [dim, title, resume, retry, quit];
+    if (fullscreen.supported() && !fullscreen.standalone()) {
+      items.push(button(this, 640, 620, 320, 60, '전체화면 켜기/끄기', () => void fullscreen.toggle(), 0xdfe6f5, 22));
+    }
+    return this.add.container(0, 0, items).setDepth(100);
   }
 
   private onPaused(on: boolean): void {

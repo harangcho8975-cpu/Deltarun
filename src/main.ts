@@ -5,6 +5,7 @@ import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { ResultScene } from './scenes/ResultScene';
+import { fullscreen } from './ui/fullscreen';
 
 // 논리 해상도는 항상 1280×720. 기기는 비율 그대로 키우거나 줄여서 보여주기만 한다 (휴대폰·PC 같은 화면).
 const game = new Phaser.Game({
@@ -30,19 +31,8 @@ declare global {
 }
 window.__deltaRun = { game, frozen: false, tick: 0 };
 
-// 휴대폰(터치)에서 첫 터치 때 전체화면 + 가로 고정 시도. 실패하면(iOS 등) 회전 안내만 보인다.
-const isTouch = matchMedia('(pointer: coarse)').matches;
-if (isTouch) {
-  const tryLock = async () => {
-    try {
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen();
-      }
-      const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-      await o.lock?.('landscape');
-    } catch {
-      // 지원하지 않는 브라우저
-    }
-  };
-  window.addEventListener('pointerdown', tryLock, { once: true });
+// 휴대폰(터치)에서는 첫 터치 때 전체화면 + 가로 고정을 시도한다.
+// iPhone Safari처럼 지원하지 않는 곳에서는 타이틀의 안내대로 '홈 화면에 추가'하면 전체화면으로 열린다.
+if (matchMedia('(pointer: coarse)').matches) {
+  window.addEventListener('pointerup', () => void fullscreen.enter(), { once: true });
 }

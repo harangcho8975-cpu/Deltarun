@@ -2,8 +2,15 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#1a1a2e" />
+    <!-- 홈 화면에 추가하면 주소창 없이 전체화면으로 열린다 (iPhone은 이 방법만 가능) -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/icon-180.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="delta run" />
     <title>delta run</title>
     <style>
       html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1a1a2e; }

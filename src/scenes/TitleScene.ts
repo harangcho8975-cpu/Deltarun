@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Sound } from '../audio/Sound';
 import { stageOrder, stages } from '../data/stages';
 import { saveStore } from '../save/store';
+import { fullscreen } from '../ui/fullscreen';
 import { button, COLORS, text } from '../ui/style';
 
 export class TitleScene extends Phaser.Scene {
@@ -32,14 +33,21 @@ export class TitleScene extends Phaser.Scene {
         (b.list[1] as Phaser.GameObjects.Text).setText(label(k));
       }, 0xdfe6f5, 22);
     };
-    mk(530, 'bgm');
-    mk(750, 'sfx');
+    mk(430, 'bgm');
+    mk(650, 'sfx');
+    if (fullscreen.supported() && !fullscreen.standalone()) {
+      button(this, 870, 640, 200, 60, '전체화면 (F)', () => void fullscreen.toggle(), 0xdfe6f5, 22);
+    } else if (!fullscreen.standalone()) {
+      // iPhone Safari: 전체화면 API가 없다
+      text(this, 640, 700, '전체화면: 공유 버튼 → "홈 화면에 추가"로 열어 주세요', 18, COLORS.inkDim).setOrigin(0.5, 1);
+    }
     text(this, 1260, 700, `코인 ${saveStore.data.coins}`, 20, '#ffd23f', true).setOrigin(1, 1);
 
     // 키보드: 1·2·3으로 시작, Enter는 열린 마지막 스테이지
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       const n = Number(ev.key);
       if (n >= 1 && n <= stageOrder.length) this.start(stageOrder[n - 1]);
+      if (ev.code === 'KeyF') void fullscreen.toggle();
       if (ev.key === 'Enter') {
         const open = stageOrder.filter((id) => saveStore.isUnlocked(stageOrder, id));
         this.start(open[open.length - 1]);
