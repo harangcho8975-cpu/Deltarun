@@ -37,6 +37,6 @@ export class PreloadScene extends Phaser.Scene {
 
   create(): void {
     if (params.stage) this.scene.start('Game', { stageId: params.stage });
-    else this.scene.start('Title');
+    else this.scene.start('Lobby');
   }
 }

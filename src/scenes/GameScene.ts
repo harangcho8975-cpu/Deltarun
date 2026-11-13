@@ -113,7 +113,7 @@ export class GameScene extends Phaser.Scene {
 
   quit(): void {
     this.scene.stop('UI');
-    this.scene.start('Title');
+    this.scene.start('Lobby');
   }
 
   update(_time: number, delta: number): void {

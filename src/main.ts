@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
-import { TitleScene } from './scenes/TitleScene';
+import { LobbyScene } from './scenes/LobbyScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { ResultScene } from './scenes/ResultScene';
@@ -21,7 +21,7 @@ const game = new Phaser.Game({
   },
   input: { activePointers: 3 },
   render: { preserveDrawingBuffer: true },
-  scene: [BootScene, PreloadScene, TitleScene, GameScene, UIScene, ResultScene],
+  scene: [BootScene, PreloadScene, LobbyScene, GameScene, UIScene, ResultScene],
 });
 
 declare global {

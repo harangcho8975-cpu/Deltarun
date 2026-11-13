@@ -77,7 +77,7 @@ export class UIScene extends Phaser.Scene {
     const title = text(this, 640, 200, '일시정지', 56, '#ffffff', true).setOrigin(0.5);
     const resume = button(this, 640, 320, 320, 76, '계속하기', () => this.game_.setPaused(false));
     const retry = button(this, 640, 420, 320, 76, '다시 시작', () => this.game_.restart(), 0xdfe6f5);
-    const quit = button(this, 640, 520, 320, 76, '스테이지 목록', () => this.game_.quit(), 0xdfe6f5);
+    const quit = button(this, 640, 520, 320, 76, '로비로', () => this.game_.quit(), 0xdfe6f5);
     const items: Phaser.GameObjects.GameObject[] = [dim, title, resume, retry, quit];
     if (fullscreen.supported() && !fullscreen.standalone()) {
       items.push(button(this, 640, 620, 320, 60, '전체화면 켜기/끄기', () => void fullscreen.toggle(), 0xdfe6f5, 22));

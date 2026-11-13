@@ -229,5 +229,29 @@
     "key": "bgm_stage3",
     "type": "audio",
     "path": null
+  },
+  {
+    "key": "char_orange",
+    "type": "image",
+    "path": null,
+    "width": 360,
+    "height": 480,
+    "placeholderColor": "#f5a623"
+  },
+  {
+    "key": "char_blueberry",
+    "type": "image",
+    "path": null,
+    "width": 360,
+    "height": 480,
+    "placeholderColor": "#5b7bd5"
+  },
+  {
+    "key": "char_mint",
+    "type": "image",
+    "path": null,
+    "width": 360,
+    "height": 480,
+    "placeholderColor": "#3ddc97"
   }
 ]

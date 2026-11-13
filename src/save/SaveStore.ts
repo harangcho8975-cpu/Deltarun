@@ -1,4 +1,5 @@
 // localStorage 래퍼. 어떤 오류가 나도 게임은 기본값으로 계속 돈다.
+import { characters, DEFAULT_CHARACTER } from '../data/characters';
 
 export interface StageRecord {
   cleared: boolean;
@@ -10,6 +11,7 @@ export interface SaveData {
   version: 1;
   stages: Record<string, StageRecord>;
   coins: number;
+  selectedCharacter: string;
   settings: { bgm: boolean; sfx: boolean };
 }
 
@@ -21,7 +23,7 @@ export interface KeyValueStorage {
 export const SAVE_KEY = 'deltarun.save';
 
 export function defaultSave(): SaveData {
-  return { version: 1, stages: {}, coins: 0, settings: { bgm: true, sfx: true } };
+  return { version: 1, stages: {}, coins: 0, selectedCharacter: DEFAULT_CHARACTER, settings: { bgm: true, sfx: true } };
 }
 
 function sanitize(raw: unknown): SaveData {
@@ -29,6 +31,9 @@ function sanitize(raw: unknown): SaveData {
   if (!raw || typeof raw !== 'object') return d;
   const r = raw as Partial<SaveData>;
   if (r.version !== 1) return d; // 이후 버전이 생기면 여기서 migrate
+  if (typeof r.selectedCharacter === 'string' && characters.some((c) => c.id === r.selectedCharacter)) {
+    d.selectedCharacter = r.selectedCharacter; // 목록에 없는 값(지워진 캐릭터 등)은 기본값
+  }
   if (typeof r.coins === 'number' && Number.isFinite(r.coins) && r.coins >= 0) d.coins = Math.floor(r.coins);
   if (r.settings && typeof r.settings === 'object') {
     d.settings.bgm = r.settings.bgm !== false;
@@ -111,6 +116,12 @@ export class SaveStore {
     this.data.coins += r.coins; // 코인은 실패해도 누적
     this.save();
     return { newBest };
+  }
+
+  setCharacter(id: string): void {
+    if (!characters.some((c) => c.id === id)) return;
+    this.data.selectedCharacter = id;
+    this.save();
   }
 
   setSetting(key: 'bgm' | 'sfx', value: boolean): void {

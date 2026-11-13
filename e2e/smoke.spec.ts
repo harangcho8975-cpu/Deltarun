@@ -10,10 +10,11 @@ function collectErrors(page: Page): string[] {
 const activeScenes = (page: Page) =>
   page.evaluate(() => window.__deltaRun!.game.scene.getScenes(true).map((s) => s.scene.key));
 
-test('이미지 파일 없이 타이틀 → 스테이지 1 → 점프, 콘솔 에러 0건', async ({ page }) => {
+test('이미지 파일 없이 로비 → 스테이지 1 → 점프, 콘솔 에러 0건', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
-  await expect.poll(() => activeScenes(page)).toContain('Title');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  await page.keyboard.press('Enter'); // 플레이 → 스테이지 카드
   await page.keyboard.press('1');
   await expect.poll(() => activeScenes(page)).toContain('Game');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.tick)).toBeGreaterThan(30);
@@ -71,4 +72,46 @@ test('네 가지 화면 크기에서 같은 장면', async ({ browser }) => {
   }
   const diff = (a: number[], b: number[]) => a.reduce((s, v, i) => s + Math.abs(v - b[i]), 0) / a.length;
   for (let i = 1; i < shots.length; i++) expect(diff(shots[0], shots[i]), VIEWPORTS[i].name).toBeLessThan(2);
+});
+
+test('로비: 선택한 캐릭터가 가운데, 플레이를 누르면 세로 카드가 가로로 늘어선다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  const lobby = () =>
+    page.evaluate(() => {
+      const s = window.__deltaRun!.game.scene.getScene('Lobby') as unknown as {
+        hero: { x: number; texture: { key: string } };
+        homeUI: { visible: boolean };
+        stageUI: { visible: boolean };
+        strip: { list: { x: number; y: number; list: { width?: number; height?: number; type: string }[] }[] };
+      };
+      const cards = s.strip.list.map((c) => ({ x: c.x, y: c.y }));
+      return { heroX: s.hero.x, heroKey: s.hero.texture.key, home: s.homeUI.visible, stages: s.stageUI.visible, cards };
+    });
+
+  let st = await lobby();
+  expect(st.heroX).toBe(640);
+  expect(st.heroKey).toBe('char_orange');
+  expect(st.home).toBe(true);
+  expect(st.stages).toBe(false);
+
+  // 오른쪽 화살표로 캐릭터를 바꾸면 가운데 캐릭터가 바뀌고 새로고침해도 유지된다
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => (await lobby()).heroKey).toBe('char_blueberry');
+  await page.reload();
+  await expect.poll(async () => (await lobby()).heroKey).toBe('char_blueberry');
+
+  // [플레이](오른쪽 아래)를 누르면 카드가 나타난다
+  await page.mouse.click(1090, 640);
+  await expect.poll(async () => (await lobby()).stages).toBe(true);
+  st = await lobby();
+  expect(st.home).toBe(false);
+  expect(st.cards).toHaveLength(3);
+  // 가로로 배열: y는 모두 같고 x는 증가
+  expect(new Set(st.cards.map((c) => c.y)).size).toBe(1);
+  expect(st.cards[0].x).toBeLessThan(st.cards[1].x);
+  expect(st.cards[1].x).toBeLessThan(st.cards[2].x);
+  await page.screenshot({ path: 'test-results/lobby-stages.png' });
+  expect(errors).toEqual([]);
 });

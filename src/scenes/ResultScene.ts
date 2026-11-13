@@ -48,11 +48,11 @@ export class ResultScene extends Phaser.Scene {
     const goNext = () => canNext && this.scene.start('Game', { stageId: next });
     button(this, 350, 600, 260, 76, '다시 하기', retry, 0xdfe6f5);
     button(this, 640, 600, 260, 76, '다음 스테이지', goNext).setEnabled(canNext);
-    button(this, 930, 600, 260, 76, '스테이지 목록', () => this.scene.start('Title'), 0xdfe6f5);
+    button(this, 930, 600, 260, 76, '로비로', () => this.scene.start('Lobby'), 0xdfe6f5);
 
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       if (ev.code === 'Enter' || ev.code === 'Space') (canNext ? goNext : retry)();
-      if (ev.code === 'Escape') this.scene.start('Title');
+      if (ev.code === 'Escape') this.scene.start('Lobby');
     });
   }
 }

@@ -39,4 +39,22 @@ describe('저장', () => {
     const reloaded = new SaveStore(mem);
     expect(reloaded.record('stage_01').bestScore).toBe(500);
   });
+
+  it('선택한 캐릭터를 저장하고, 목록에 없는 값은 기본값으로 돌린다', () => {
+    const mem = memory();
+    const s = new SaveStore(mem);
+    expect(s.data.selectedCharacter).toBe('orange');
+    s.setCharacter('mint');
+    expect(new SaveStore(mem).data.selectedCharacter).toBe('mint');
+    s.setCharacter('없는캐릭터');
+    expect(s.data.selectedCharacter).toBe('mint');
+    mem.data[SAVE_KEY] = JSON.stringify({ version: 1, selectedCharacter: '지워진캐릭터', stages: {}, coins: 0 });
+    expect(new SaveStore(mem).data.selectedCharacter).toBe('orange');
+  });
+
+  it('예전 저장(캐릭터 항목 없음)도 읽는다', () => {
+    const s = new SaveStore(memory({ [SAVE_KEY]: JSON.stringify({ version: 1, stages: {}, coins: 7 }) }));
+    expect(s.data.coins).toBe(7);
+    expect(s.data.selectedCharacter).toBe('orange');
+  });
 });

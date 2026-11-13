@@ -3,6 +3,8 @@ import { gameConfig as cfg } from '../config/gameConfig';
 import type { StageData } from '../data/schema';
 import { playerBox } from '../sim/collision';
 import type { Entity, EntityKind, SimEvent, SimState } from '../sim/types';
+import { characterById } from '../data/characters';
+import { saveStore } from '../save/store';
 import { ANIM_PREFIX } from './assets';
 
 const W = 1280;
@@ -147,10 +149,11 @@ export class WorldRenderer {
   private syncPlayer(s: SimState, y: number): void {
     const p = s.player;
     const hitRecently = p.invulnTicks > cfg.invulnTicksOnHit - 20 && s.effects.giant === 0 && s.effects.boost === 0;
-    let key = 'player_run';
-    if (p.state === 'jump' || p.state === 'doubleJump' || p.state === 'fall') key = 'player_jump';
-    else if (p.state === 'slide') key = 'player_slide';
-    if (hitRecently || p.state === 'dead') key = 'player_hit';
+    let pose = 'run';
+    if (p.state === 'jump' || p.state === 'doubleJump' || p.state === 'fall') pose = 'jump';
+    else if (p.state === 'slide') pose = 'slide';
+    if (hitRecently || p.state === 'dead') pose = 'hit';
+    const key = this.spriteKey(pose);
     const anim = ANIM_PREFIX + key;
     if (anim !== this.playerAnim) {
       this.player.play(anim);
@@ -161,6 +164,12 @@ export class WorldRenderer {
     this.player.setScale(s.effects.giant > 0 ? cfg.hitbox.giantScale : 1);
     this.player.setVisible(p.invulnTicks === 0 || Math.floor(p.invulnTicks / 8) % 2 === 0);
     this.player.setTint(s.effects.boost > 0 ? 0x9ff3ff : 0xffffff);
+  }
+
+  /** 선택한 캐릭터 전용 스프라이트(<id>_<포즈>)가 있으면 그것, 없으면 공용 player_<포즈> */
+  private spriteKey(pose: string): string {
+    const own = `${characterById(saveStore.data.selectedCharacter).id}_${pose}`;
+    return this.scene.textures.exists(own) ? own : `player_${pose}`;
   }
 
   private drawDebug(s: SimState, cam: number): void {
