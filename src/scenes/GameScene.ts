@@ -73,6 +73,7 @@ export class GameScene extends Phaser.Scene {
     this.sim = createSim(stage, { startX: params.debug ? params.startX : undefined, skill: ch.skillId ?? null });
     this.prev = { cameraX: this.sim.cameraX, playerY: this.sim.player.y };
     this.recorder = new ReplayRecorder(stage.id, ch.skillId);
+    if (params.god) this.sim.debugInvincible = true;
     this.controls = new InputController(this);
     this.world = new WorldRenderer(this, stage, params.debug);
     if (params.debug) this.debug = new DebugOverlay(this);

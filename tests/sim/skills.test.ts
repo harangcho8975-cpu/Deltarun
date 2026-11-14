@@ -257,7 +257,7 @@ describe('소능력·대능력 직후 무적', () => {
     expect(cfg.skills.chaosKing.invulnAfterMinorTicks).toBe(30);
   });
 
-  it('대능력이 끝난 직후 무적 60틱 (시작할 때는 아님)', () => {
+  it('대능력이 끝난 직후 무적 180틱·3초 (시작할 때는 아님)', () => {
     const s = skillSim();
     s.debugInvincible = false;
     runTagged(s, 720); // 3번째 발동 = 대능력 시작
@@ -267,7 +267,7 @@ describe('소능력·대능력 직후 무적', () => {
     runTagged(s, 360); // 1080틱: 대능력 종료
     expect(s.skill!.ultimateTicks).toBe(0);
     expect(s.player.invulnTicks).toBe(cfg.skills.chaosKing.invulnAfterUltimateTicks);
-    expect(cfg.skills.chaosKing.invulnAfterUltimateTicks).toBe(60);
+    expect(cfg.skills.chaosKing.invulnAfterUltimateTicks).toBe(180);
   });
 
   it('무적 중에는 소능력으로 못 부순 장애물에 맞아도 피해를 입지 않는다', () => {

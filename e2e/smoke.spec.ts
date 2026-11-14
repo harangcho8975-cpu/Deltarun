@@ -191,7 +191,7 @@ test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3
   expect(frisk.box).toBe(false);
 
   // 카오스 킹: 300틱 = 소능력 1번 발동 (240틱)
-  await page.goto('/?char=chaosking&stage=stage_01&freezeAt=300');
+  await page.goto('/?char=chaosking&stage=stage_01&god=1&freezeAt=300');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
   const early = await info();
   expect(early.skill!.count).toBe(1);
@@ -199,7 +199,7 @@ test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3
   expect(early.box).toBe(false);
 
   // 780틱 = 3번째 발동(720)이 대능력이라 지금 박스가 나와 있다
-  await page.goto('/?char=chaosking&stage=stage_01&freezeAt=780');
+  await page.goto('/?char=chaosking&stage=stage_01&god=1&freezeAt=780');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 60_000 }).toBe(true);
   const mid = await info();
   expect(mid.skill!.count).toBe(3);
@@ -228,7 +228,7 @@ test('카오스 킹 대능력이 끝나면 쌓인 코인이 모두 떨어져 바
       };
     });
 
-  await page.goto('/?char=chaosking&stage=stage_01');
+  await page.goto('/?char=chaosking&stage=stage_01&god=1');
   // 대능력은 1080틱(약 18초)에 끝난다. 끝난 직후를 잡는다.
   await expect.poll(async () => (await st()).tick, { timeout: 150_000, intervals: [100] }).toBeGreaterThan(1082);
   const start = await st();
@@ -246,33 +246,38 @@ test('카오스 킹 대능력이 끝나면 쌓인 코인이 모두 떨어져 바
   expect(errors).toEqual([]);
 });
 
-test('카오스 킹: 대능력이 끝난 직후 무적 동안 캐릭터가 깜빡인다', async ({ page }) => {
+test('카오스 킹: 대능력이 끝난 직후 3초 무적 동안 캐릭터가 깜빡이고, 빨간 피격 그림이 아니다', async ({ page }) => {
   test.setTimeout(240_000);
   const errors = collectErrors(page);
   const sample = () =>
     page.evaluate(() => {
       const g = window.__deltaRun!.game.scene.getScene('Game') as unknown as {
         sim: { tick: number; player: { invulnTicks: number }; skill: { ultimateTicks: number } };
-        world: { player: { visible: boolean } };
+        world: { player: { visible: boolean }; playerAnim: string };
       };
-      return { tick: g.sim.tick, inv: g.sim.player.invulnTicks, vis: g.world.player.visible, ult: g.sim.skill.ultimateTicks };
+      return { tick: g.sim.tick, inv: g.sim.player.invulnTicks, vis: g.world.player.visible, ult: g.sim.skill.ultimateTicks, anim: g.world.playerAnim };
     });
 
-  await page.goto('/?char=chaosking&stage=stage_01');
-  // 대능력이 끝나는 1080틱 바로 뒤부터 무적(60틱 = 약 1초) 동안 캐릭터가 보였다 안 보였다 하는지 센다
+  await page.goto('/?char=chaosking&stage=stage_01&god=1');
+  // 대능력이 끝나는 1080틱 바로 뒤부터 무적(180틱 = 3초) 동안 캐릭터가 보였다 안 보였다 하는지 센다
   await expect.poll(async () => (await sample()).tick, { timeout: 150_000, intervals: [50] }).toBeGreaterThan(1080);
-  const seen: boolean[] = [];
   const first = await sample();
   expect(first.ult).toBe(0);
-  expect(first.inv).toBeGreaterThan(0); // 대능력이 끝난 직후라 무적 중
-  for (let i = 0; i < 60; i++) {
+  expect(first.inv).toBeGreaterThan(120); // 3초(180틱) 중 방금 시작해서 아직 많이 남아 있다
+  const seen: boolean[] = [];
+  const anims = new Set<string>();
+  for (let i = 0; i < 100; i++) {
     const s = await sample();
-    if (s.inv > 0) seen.push(s.vis);
+    if (s.inv > 0) {
+      seen.push(s.vis);
+      anims.add(s.anim);
+    }
     await page.waitForTimeout(16);
   }
   let toggles = 0;
   for (let i = 1; i < seen.length; i++) if (seen[i] !== seen[i - 1]) toggles++;
   expect(seen.includes(true) && seen.includes(false)).toBe(true); // 보였다 안 보였다 한다
-  expect(toggles).toBeGreaterThanOrEqual(3); // 한 번이 아니라 여러 번 깜빡인다
+  expect(toggles).toBeGreaterThanOrEqual(5); // 여러 번 깜빡인다
+  expect([...anims].some((a) => a.includes('_hit'))).toBe(false); // 무적이 길어도 빨간 피격 그림으로 바뀌지 않는다
   expect(errors).toEqual([]);
 });

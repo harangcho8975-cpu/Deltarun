@@ -66,6 +66,7 @@ export class WorldRenderer {
   private dropFree: Phaser.GameObjects.Image[] = [];
   private debugGfx: Phaser.GameObjects.Graphics | null = null;
   private playerAnim = '';
+  private hitFlashUntil = 0;
   renderCameraX = 0;
 
   constructor(private scene: Phaser.Scene, private stage: StageData, debug: boolean) {
@@ -165,7 +166,8 @@ export class WorldRenderer {
 
   private syncPlayer(s: SimState, y: number): void {
     const p = s.player;
-    const hitRecently = p.invulnTicks > cfg.invulnTicksOnHit - 20 && s.effects.giant === 0 && s.effects.boost === 0;
+    // 피격 그림은 실제로 맞은 직후 20틱만 (무적이 길어져도 계속 빨갛게 보이지 않는다)
+    const hitRecently = s.tick < this.hitFlashUntil && s.effects.giant === 0 && s.effects.boost === 0;
     let pose = 'run';
     if (p.state === 'jump' || p.state === 'doubleJump' || p.state === 'fall') pose = 'jump';
     else if (p.state === 'slide') pose = 'slide';
@@ -255,6 +257,7 @@ export class WorldRenderer {
         break;
       }
       case 'hit':
+        this.hitFlashUntil = s.tick + 20;
         this.scene.cameras.main.shake(160, 0.01);
         this.flash.setFillStyle(0xff0000, 0.25);
         this.scene.tweens.add({ targets: this.flash, fillAlpha: 0, duration: 250 });
