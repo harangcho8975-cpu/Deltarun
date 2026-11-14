@@ -146,3 +146,18 @@ describe('내려올 때 떨어지는 속도', () => {
     expect(h).toBeLessThanOrEqual(185);
   });
 });
+
+describe('점프 시간', () => {
+  it('1단 점프는 떠서 착지까지 35~39틱(약 0.6초)이다. 점프 높이는 그대로', () => {
+    const s = sim();
+    let air = 0;
+    let landed = false;
+    for (let t = 0; t < 200 && !landed; t++) {
+      if (run(s, 1, t === 0 ? JUMP : NONE).some((e) => e.type === 'land')) landed = true;
+      else air++;
+    }
+    expect(landed).toBe(true);
+    expect(air + 1).toBeGreaterThanOrEqual(35);
+    expect(air + 1).toBeLessThanOrEqual(39); // 예전(약 42틱)보다 짧다
+  });
+});

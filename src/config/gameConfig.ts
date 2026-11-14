@@ -14,11 +14,11 @@ export const gameConfig = {
   deathY: 820,
   playerScreenX: 240,
 
-  gravity: 2600, // px/s² (올라갈 때)
+  gravity: 3360, // px/s² (올라갈 때). 점프 높이는 v²/2g ≈ 177px로 유지하면서 점프 전체 시간만 짧게
   fallGravityScale: 1.25, // 내려올 때(vy ≥ 0) 중력 배율: 올라갈 때보다 빠르게 떨어진다
-  jumpVelocity: -960, // px/s
-  doubleJumpVelocity: -900,
-  maxFallSpeed: 1600,
+  jumpVelocity: -1090, // px/s
+  doubleJumpVelocity: -1020,
+  maxFallSpeed: 1800,
   coyoteTicks: 6,
   jumpBufferTicks: 6,
 
@@ -93,7 +93,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 7;
+export const SIM_VERSION = 8;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {
