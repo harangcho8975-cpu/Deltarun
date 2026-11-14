@@ -6,7 +6,7 @@ import type { StageData } from '../data/schema';
 import { cloneSim, createSim } from './createSim';
 import { ReplayRecorder, type Replay } from './replay';
 import { step } from './step';
-import type { InputFrame, SimState } from './types';
+import type { InputFrame, SimState, SkillId } from './types';
 
 interface Plan {
   /** 숫자면 그 틱 수만큼, 'land'면 점프 후 착지할 때까지 실행 */
@@ -100,9 +100,9 @@ export interface BotRun {
   hits: number;
 }
 
-export function playWithBot(stage: StageData, maxTicks = 60 * 60 * 5): BotRun {
-  const s = createSim(stage);
-  const rec = new ReplayRecorder(stage.id);
+export function playWithBot(stage: StageData, maxTicks = 60 * 60 * 5, skill: SkillId | null = null): BotRun {
+  const s = createSim(stage, { skill });
+  const rec = new ReplayRecorder(stage.id, skill);
   let hits = 0;
   while (s.outcome === 'playing' && s.tick < maxTicks) {
     const plan = botChoose(s);

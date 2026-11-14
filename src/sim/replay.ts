@@ -2,13 +2,15 @@ import { configHash, fnv1a } from '../config/gameConfig';
 import type { StageData } from '../data/schema';
 import { createSim } from './createSim';
 import { step } from './step';
-import type { InputFrame, SimState } from './types';
+import type { InputFrame, SimState, SkillId } from './types';
 
 export type ReplayAction = 'J' | 'S+' | 'S-';
 
 export interface Replay {
   stageId: string;
   configHash: string;
+  /** 녹화한 캐릭터의 스킬 (없으면 스킬 없음) */
+  skill?: SkillId;
   inputs: [number, ReplayAction][];
 }
 
@@ -17,7 +19,7 @@ export class ReplayRecorder {
   private inputs: [number, ReplayAction][] = [];
   private slide = false;
 
-  constructor(private stageId: string) {}
+  constructor(private stageId: string, private skill?: SkillId | null) {}
 
   record(tick: number, input: InputFrame): void {
     if (input.jumpPressed) this.inputs.push([tick, 'J']);
@@ -28,7 +30,9 @@ export class ReplayRecorder {
   }
 
   toJSON(): Replay {
-    return { stageId: this.stageId, configHash: configHash(), inputs: this.inputs.map((x) => [x[0], x[1]]) };
+    const out: Replay = { stageId: this.stageId, configHash: configHash(), inputs: this.inputs.map((x) => [x[0], x[1]]) };
+    if (this.skill) out.skill = this.skill;
+    return out;
   }
 }
 
@@ -58,7 +62,7 @@ export interface RunResult {
 }
 
 export function runReplay(stage: StageData, replay: Replay, maxTicks = 60 * 60 * 5, collectHashes = false): RunResult {
-  const s = createSim(stage);
+  const s = createSim(stage, { skill: replay.skill ?? null });
   const player = new ReplayPlayer(replay);
   const hashes: string[] = [];
   while (s.outcome === 'playing' && s.tick < maxTicks) {
@@ -76,6 +80,7 @@ export function hashState(s: SimState): string {
     p.coyoteTicks, p.jumpBufferTicks, s.effects.magnet, s.effects.giant, s.effects.boost,
     s.boostGroundGrace, s.jellyScore, s.jelliesTaken, s.coins, s.cursor,
   ];
+  if (s.skill) parts.push(s.skill.timer, s.skill.count, s.skill.ultimateTicks, s.skill.ultimateElapsed, s.skill.boxCoins);
   let alive = '';
   for (const e of s.entities) alive += e.alive ? '1' : '0';
   return fnv1a(parts.join('|') + '|' + alive);

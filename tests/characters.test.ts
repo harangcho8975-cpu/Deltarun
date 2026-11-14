@@ -16,8 +16,20 @@ describe('캐릭터 데이터', () => {
   it('정보 화면에 필요한 항목이 다 있다', () => {
     for (const c of characters) {
       expect(RARITY[c.rarity], c.id).toBeDefined();
-      expect(c.name && c.tagline && c.skill.name && c.skill.description && c.story, c.id).toBeTruthy();
+      expect(c.name && c.tagline && c.story, c.id).toBeTruthy();
+      for (const a of c.abilities) expect(a.name && a.description, `${c.id} 능력`).toBeTruthy();
     }
+  });
+  it('프리스크는 능력이 없고, 카오스 킹은 소능력·대능력이 있으며 둘 다 게임에서 동작한다', () => {
+    expect(characterById('frisk').abilities).toHaveLength(0);
+    expect(characterById('frisk').skillId).toBeUndefined();
+    const k = characterById('chaosking');
+    expect(k.abilities.map((a) => a.kind)).toEqual(['minor', 'ultimate']);
+    expect(k.abilities.every((a) => a.active)).toBe(true);
+    expect(k.skillId).toBe('chaosKing');
+  });
+  it('게임에서 동작하는 능력(active)이 있는 캐릭터는 skillId가 있다', () => {
+    for (const c of characters) expect(c.abilities.some((a) => a.active), c.id).toBe(!!c.skillId);
   });
   it('모르는 id는 기본 캐릭터로', () => {
     expect(characterById('없음').id).toBe(DEFAULT_CHARACTER);

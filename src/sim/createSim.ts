@@ -1,11 +1,13 @@
 import { gameConfig as cfg } from '../config/gameConfig';
 import type { StageData } from '../data/schema';
 import { bridgeGaps } from './collision';
-import type { Entity, EntityKind, SimState } from './types';
+import type { Entity, EntityKind, SimState, SkillId } from './types';
 
 export interface CreateSimOptions {
   /** 디버그: 이 월드 x(플레이어 위치)에서 시작 */
   startX?: number;
+  /** 캐릭터 스킬 (없으면 null) */
+  skill?: SkillId | null;
 }
 
 function sizeOf(kind: EntityKind) {
@@ -79,6 +81,9 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
     ground,
     giantGround: bridgeGaps(ground, cfg.giantGapBridge),
     stage,
+    skill: opts.skill
+      ? { id: opts.skill, timer: cfg.skills[opts.skill].intervalTicks, count: 0, ultimateTicks: 0, ultimateElapsed: 0, boxCoins: 0 }
+      : null,
     debugInvincible: false,
   };
 }
@@ -89,6 +94,7 @@ export function cloneSim(s: SimState): SimState {
     ...s,
     player: { ...s.player },
     effects: { ...s.effects },
+    skill: s.skill ? { ...s.skill } : null,
     entities: s.entities.map((e) => ({ ...e })),
   };
 }

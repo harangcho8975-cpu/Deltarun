@@ -19,6 +19,8 @@ export class UIScene extends Phaser.Scene {
   private progress!: Phaser.GameObjects.Graphics;
   private score!: Phaser.GameObjects.Text;
   private effects!: Phaser.GameObjects.Text;
+  private skillLabel!: Phaser.GameObjects.Text;
+  private skillBar!: Phaser.GameObjects.Graphics;
   private popup!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Text;
   private jumpBtn!: Phaser.GameObjects.Image;
@@ -41,6 +43,9 @@ export class UIScene extends Phaser.Scene {
     this.progress = this.add.graphics();
     this.score = text(this, 1130, 30, '0', 34, '#ffffff', true).setOrigin(1, 0).setStroke('#1a1a2e', 6);
     this.effects = text(this, 40, 98, '', 20, '#ffffff', true).setStroke('#1a1a2e', 5);
+    // 캐릭터 스킬 막대 (스킬 있는 캐릭터만 보인다)
+    this.skillLabel = text(this, 40, 124, '', 18, '#ffffff', true).setStroke('#1a1a2e', 4);
+    this.skillBar = this.add.graphics();
     this.popup = text(this, 640, 220, '', 44, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 8).setAlpha(0);
     this.banner = text(this, 640, 330, '', 72, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 10).setVisible(false);
 
@@ -63,11 +68,13 @@ export class UIScene extends Phaser.Scene {
     this.game_.events.on('hud', this.onHud, this);
     this.game_.events.on('paused', this.onPaused, this);
     this.game_.events.on('item', this.onItem, this);
+    this.game_.events.on('popup', this.onPopup, this);
     this.game_.events.on('finished', this.onFinished, this);
     this.events.once('shutdown', () => {
       this.game_.events.off('hud', this.onHud, this);
       this.game_.events.off('paused', this.onPaused, this);
       this.game_.events.off('item', this.onItem, this);
+      this.game_.events.off('popup', this.onPopup, this);
       this.game_.events.off('finished', this.onFinished, this);
     });
   }
@@ -90,7 +97,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onItem(kind: string): void {
-    this.popup.setText(ITEM_LABEL[kind] ?? '').setAlpha(1).setScale(0.8).setY(220);
+    this.onPopup(ITEM_LABEL[kind] ?? '');
+  }
+
+  private onPopup(label: string): void {
+    this.popup.setText(label).setAlpha(1).setScale(0.8).setY(220);
     this.tweens.killTweensOf(this.popup);
     this.tweens.add({ targets: this.popup, alpha: 0, y: 190, scale: 1, duration: 900, ease: 'Cubic.easeIn' });
   }
@@ -127,6 +138,31 @@ export class UIScene extends Phaser.Scene {
     if (s.effects.giant > 0) parts.push(`거대화 ${sec(s.effects.giant)}초`);
     if (s.effects.boost > 0) parts.push(`부스터 ${sec(s.effects.boost)}초`);
     this.effects.setText(parts.join('   '));
+
+    // 스킬 막대: 평소엔 다음 발동까지, 대능력 중엔 남은 시간과 박스 코인
+    const k = s.skill;
+    this.skillLabel.setVisible(!!k);
+    this.skillBar.clear();
+    if (k) {
+      const c = cfg.skills[k.id];
+      let fill: number;
+      let color: number;
+      if (k.ultimateTicks > 0) {
+        this.skillLabel.setText(`대능력  박스 코인 ${k.boxCoins}  ·  ${sec(k.ultimateTicks)}초`);
+        fill = k.ultimateTicks / c.ultimateTicks;
+        color = 0xa66cff;
+      } else {
+        const nextIsUltimate = (k.count + 1) % c.ultimateEvery === 0;
+        this.skillLabel.setText(`${nextIsUltimate ? '다음: 대능력!' : '다음: 소능력'}  ${sec(k.timer)}초`);
+        fill = 1 - k.timer / c.intervalTicks;
+        color = nextIsUltimate ? COLORS.accent : 0x4a90e2;
+      }
+      this.skillBar
+        .fillStyle(0x1a1a2e, 0.45)
+        .fillRoundedRect(40, 150, 400, 12, 6)
+        .fillStyle(color, 1)
+        .fillRoundedRect(40, 150, Math.max(12, 400 * fill), 12, 6);
+    }
 
     const jumpLit = this.time.now - controls.lastJumpAt < 120;
     this.jumpBtn.setAlpha(jumpLit ? 0.95 : 0.5).setScale(jumpLit ? 0.93 * (160 / this.jumpBtn.width) : 160 / this.jumpBtn.width);

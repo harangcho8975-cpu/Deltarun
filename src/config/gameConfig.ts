@@ -52,6 +52,23 @@ export const gameConfig = {
 
   giantGapBridge: 40, // 거대화 중 이 폭 미만의 구멍은 바닥으로 본다
 
+  skills: {
+    chaosKing: {
+      intervalTicks: 240, // 4초마다 발동
+      ultimateEvery: 3, // 3번째 발동은 소능력 대신 대능력
+      ultimateTicks: 360, // 대능력 6초
+      coinsPerObstacle: 10, // 박스가 부순 장애물 하나당 적립 코인
+      box: {
+        w: 240,
+        h: 360,
+        screenX: 1010, // 화면 오른쪽 (왼쪽 끝 기준)
+        bottomMin: 460, // 박스 아랫변이 가장 높을 때 y
+        bottomMax: 600, // 가장 낮을 때 (바닥)
+        periodTicks: 120, // 한 번 오르내리는 데 걸리는 시간 (2초)
+      },
+    },
+  },
+
   activeBehind: 128,
   activeAhead: 1280 + 256,
   pxPerMeter: 10,
@@ -63,7 +80,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 2;
+export const SIM_VERSION = 3;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {

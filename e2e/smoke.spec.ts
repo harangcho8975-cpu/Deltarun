@@ -125,7 +125,7 @@ test('로비 캐릭터를 누르면 격자 목록 → 카드를 누르면 정보
     const s = window.__deltaRun!.game.scene.getScene('Characters') as unknown as { grid: { list: { x: number; y: number; getData(k: string): string }[] } };
     return s.grid.list.map((c) => ({ x: c.x, y: c.y, id: c.getData('id') }));
   });
-  expect(cards.map((c) => c.id)).toEqual(['orange', 'blueberry', 'mint']);
+  expect(cards.map((c) => c.id)).toEqual(['orange', 'blueberry', 'mint', 'frisk', 'chaosking']);
   expect(new Set(cards.map((c) => c.y)).size).toBe(1); // 한 줄에 왼쪽부터
   expect(cards[0].x).toBeLessThan(cards[1].x);
 
@@ -134,7 +134,7 @@ test('로비 캐릭터를 누르면 격자 목록 → 카드를 누르면 정보
   expect(await page.evaluate(() => (window.__deltaRun!.game.scene.getScene('CharacterInfo') as unknown as { id: string }).id)).toBe('blueberry');
   await page.screenshot({ path: 'test-results/character-info.png' });
 
-  await page.mouse.click(1090, 656); // 선택하기
+  await page.mouse.click(1090, 674); // 선택하기
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
   expect(
     await page.evaluate(() => (window.__deltaRun!.game.scene.getScene('Lobby') as unknown as { hero: { texture: { key: string } } }).hero.texture.key),
@@ -169,4 +169,41 @@ test('휴대폰: 첫 터치로 전체화면, 뒤로가기 한 번이면 페이�
   await expect.poll(isFs).toBe(true);
   expect(errors).toEqual([]);
   await ctx.close();
+});
+
+test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3번째에 대능력(박스)이 나간다', async ({ page }) => {
+  const errors = collectErrors(page);
+  const info = () =>
+    page.evaluate(() => {
+      const g = window.__deltaRun!.game.scene.getScene('Game') as unknown as {
+        sim: { tick: number; skill: { count: number; ultimateTicks: number; boxCoins: number } | null };
+        world: { chaosBox: { visible: boolean } };
+      };
+      return { tick: g.sim.tick, skill: g.sim.skill, box: g.world.chaosBox.visible };
+    });
+
+  // 프리스크: 스킬 없음
+  await page.goto('/?char=frisk&stage=stage_01&freezeAt=300');
+  await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
+  const frisk = await info();
+  expect(frisk.skill).toBeNull();
+  expect(frisk.box).toBe(false);
+
+  // 카오스 킹: 300틱 = 소능력 1번 발동 (240틱)
+  await page.goto('/?char=chaosking&stage=stage_01&freezeAt=300');
+  await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
+  const early = await info();
+  expect(early.skill!.count).toBe(1);
+  expect(early.skill!.ultimateTicks).toBe(0);
+  expect(early.box).toBe(false);
+
+  // 900틱 = 3번째 발동(720)이 대능력이라 지금 박스가 나와 있다
+  await page.goto('/?char=chaosking&stage=stage_01&freezeAt=900');
+  await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 40_000 }).toBe(true);
+  const mid = await info();
+  expect(mid.skill!.count).toBe(3);
+  expect(mid.skill!.ultimateTicks).toBeGreaterThan(0);
+  expect(mid.box).toBe(true);
+  await page.screenshot({ path: 'test-results/chaos-king-ultimate.png' });
+  expect(errors).toEqual([]);
 });

@@ -253,5 +253,29 @@
     "width": 360,
     "height": 480,
     "placeholderColor": "#3ddc97"
+  },
+  {
+    "key": "char_frisk",
+    "type": "image",
+    "path": null,
+    "width": 360,
+    "height": 480,
+    "placeholderColor": "#6c7a89"
+  },
+  {
+    "key": "char_chaosking",
+    "type": "image",
+    "path": null,
+    "width": 360,
+    "height": 480,
+    "placeholderColor": "#7b2cbf"
+  },
+  {
+    "key": "fx_chaos_box",
+    "type": "image",
+    "path": null,
+    "width": 240,
+    "height": 360,
+    "placeholderColor": "#7b2cbfcc"
   }
 ]

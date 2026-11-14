@@ -1,10 +1,11 @@
 // 선택할 수 있는 캐릭터. 이름·그림·설명은 모두 자리표시다.
-// 지금은 겉모습만 다르고 게임 수치는 같다. skill은 정보 화면에 보여 주는 기획 내용이며,
-// 아직 게임에 적용되지 않는다 (skill.active === false).
+// abilities는 정보 화면에 보여 주는 능력 목록이다. active가 true인 능력만 게임에서 실제로 동작하며,
+// 동작은 skillId로 src/sim/skills.ts 에 연결된다. 능력이 없는 캐릭터는 abilities가 빈 목록이다.
 //
 // 그림 규칙 (public/assets/manifest.json 의 키):
 //   char_<id>              로비·목록·정보 화면의 캐릭터 그림 (360×480, 발끝이 이미지 아래쪽)
 //   <id>_run / _jump / _slide / _hit   게임 중 스프라이트. 없으면 공용 player_* 로 대신한다.
+import type { SkillId } from '../sim/types';
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 
@@ -15,12 +16,26 @@ export const RARITY: Record<Rarity, { label: string; color: number; css: string 
   legendary: { label: '레전드', color: 0xf5a623, css: '#f5a623' },
 };
 
+export type AbilityKind = 'minor' | 'ultimate';
+
+export const ABILITY_LABEL: Record<AbilityKind, string> = { minor: '소능력', ultimate: '대능력' };
+
+export interface Ability {
+  kind: AbilityKind;
+  name: string;
+  description: string;
+  /** false면 설명만 있고 아직 게임에 적용되지 않는다 */
+  active: boolean;
+}
+
 export interface CharacterInfo {
   id: string;
   name: string;
   tagline: string;
   rarity: Rarity;
-  skill: { name: string; description: string; active: boolean };
+  abilities: Ability[];
+  /** 게임 중 실제로 동작하는 스킬 (sim/skills.ts) */
+  skillId?: SkillId;
   story: string;
 }
 
@@ -30,7 +45,7 @@ export const characters: CharacterInfo[] = [
     name: '오렌지',
     tagline: '아침 들판을 제일 먼저 달리는 러너',
     rarity: 'common',
-    skill: { name: '아침 질주', description: '출발 후 5초 동안 조금 더 빨리 달린다.', active: false },
+    abilities: [{ kind: 'minor', name: '아침 질주', description: '출발 후 5초 동안 조금 더 빨리 달린다.', active: false }],
     story: '해가 뜨기 전부터 들판을 달려 온 러너. 누구보다 먼저 결승선을 보고 싶어서 오늘도 신발 끈을 꽉 묶는다.',
   },
   {
@@ -38,7 +53,7 @@ export const characters: CharacterInfo[] = [
     name: '블루베리',
     tagline: '차분하게 구멍을 건너는 러너',
     rarity: 'rare',
-    skill: { name: '차분한 착지', description: '2단 점프가 조금 더 높아진다.', active: false },
+    abilities: [{ kind: 'minor', name: '차분한 착지', description: '2단 점프가 조금 더 높아진다.', active: false }],
     story: '협곡 마을에서 자란 조용한 러너. 서두르지 않고 한 번 더 뛰어오르는 법을 안다.',
   },
   {
@@ -46,8 +61,34 @@ export const characters: CharacterInfo[] = [
     name: '민트',
     tagline: '젤리를 놓치지 않는 러너',
     rarity: 'epic',
-    skill: { name: '젤리 감지', description: '가까운 젤리를 약하게 끌어당긴다.', active: false },
+    abilities: [{ kind: 'minor', name: '젤리 감지', description: '가까운 젤리를 약하게 끌어당긴다.', active: false }],
     story: '반짝이는 것이라면 어디서든 찾아내는 러너. 주머니는 늘 젤리로 가득하다.',
+  },
+  {
+    id: 'frisk',
+    name: '프리스크',
+    tagline: '아무 능력 없이 오직 달리기로 승부하는 러너',
+    rarity: 'common',
+    abilities: [],
+    story: '특별한 힘은 없다. 점프와 슬라이드만으로 끝까지 달리는 가장 기본에 충실한 러너.',
+  },
+  {
+    id: 'chaosking',
+    name: '카오스 킹',
+    tagline: '앞을 막는 장애물을 상자째 부수는 혼돈의 왕',
+    rarity: 'legendary',
+    skillId: 'chaosKing',
+    abilities: [
+      { kind: 'minor', name: '혼돈의 파쇄', description: '4초마다 화면 안의 장애물을 모두 부순다.', active: true },
+      {
+        kind: 'ultimate',
+        name: '혼돈의 상자',
+        description:
+          '세 번째 발동은 소능력 대신 대능력이 나간다. 6초 동안 오른쪽에서 위아래로 움직이는 거대한 박스가 닿는 장애물을 부수고, 하나당 코인 10개를 모은다. 끝나면 박스가 폭발하며 코인이 쏟아진다. 대능력 중에는 소능력이 나가지 않는다.',
+        active: true,
+      },
+    ],
+    story: '왕관 하나 쓰고 나타나 길 위의 모든 것을 부수며 달리는 러너. 부순 만큼 주머니가 두둑해진다.',
   },
 ];
 

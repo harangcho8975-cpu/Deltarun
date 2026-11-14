@@ -7,6 +7,8 @@ export const params = {
   startX: q.has('x') ? Number(q.get('x')) : undefined,
   /** 디버그: 타이틀을 건너뛰고 바로 이 스테이지 */
   stage: q.get('stage') ?? undefined,
+  /** 테스트용: 저장된 선택과 무관하게 이 캐릭터로 플레이 (예: ?char=chaosking) */
+  char: q.get('char') ?? undefined,
   /** 테스트용: 이 틱에서 시뮬레이션을 멈춘다 */
   freezeAt: q.has('freezeAt') ? Number(q.get('freezeAt')) : undefined,
 };

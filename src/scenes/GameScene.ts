@@ -10,6 +10,7 @@ import { InputController } from '../input/InputController';
 import { WorldRenderer, type RenderSnapshot } from '../render/WorldRenderer';
 import { createSim, ReplayRecorder, starsFor, step, totalScore, type SimEvent, type SimState } from '../sim';
 import { fullscreen } from '../ui/fullscreen';
+import { activeCharacter } from '../ui/activeCharacter';
 import { text } from '../ui/style';
 
 export interface RunResultData {
@@ -68,9 +69,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.sim = createSim(stage, { startX: params.debug ? params.startX : undefined });
+    const ch = activeCharacter();
+    this.sim = createSim(stage, { startX: params.debug ? params.startX : undefined, skill: ch.skillId ?? null });
     this.prev = { cameraX: this.sim.cameraX, playerY: this.sim.player.y };
-    this.recorder = new ReplayRecorder(stage.id);
+    this.recorder = new ReplayRecorder(stage.id, ch.skillId);
     this.controls = new InputController(this);
     this.world = new WorldRenderer(this, stage, params.debug);
     if (params.debug) this.debug = new DebugOverlay(this);
@@ -167,6 +169,18 @@ export class GameScene extends Phaser.Scene {
           break;
         case 'smash':
           Sound.play(this, 'sfx_smash');
+          break;
+        case 'skillMinor':
+          Sound.play(this, 'sfx_smash');
+          if (ev.destroyed > 0) this.events.emit('popup', `파쇄! ×${ev.destroyed}`);
+          break;
+        case 'ultimateStart':
+          Sound.play(this, 'sfx_item');
+          this.events.emit('popup', '혼돈의 상자!');
+          break;
+        case 'ultimateEnd':
+          Sound.play(this, 'sfx_coin');
+          this.events.emit('popup', `폭발! +${ev.coins} 코인`);
           break;
         case 'cleared':
           Sound.play(this, 'sfx_clear');

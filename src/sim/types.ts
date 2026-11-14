@@ -5,6 +5,7 @@ export type PlayerState = 'run' | 'jump' | 'doubleJump' | 'fall' | 'slide' | 'de
 export type Outcome = 'playing' | 'cleared' | 'failed';
 export type EffectName = 'magnet' | 'giant' | 'boost';
 export type EntityKind = ObstacleType | JellyType | ItemType;
+export type SkillId = 'chaosKing';
 
 export interface InputFrame {
   jumpPressed: boolean;
@@ -40,6 +41,21 @@ export interface PlayerSim {
   slideHeld: boolean;
 }
 
+/** 캐릭터 스킬 진행 상태. 스킬이 없는 캐릭터는 SimState.skill이 null */
+export interface SkillState {
+  id: SkillId;
+  /** 다음 발동까지 남은 틱 (대능력 중에는 멈춘다) */
+  timer: number;
+  /** 지금까지 발동한 횟수. 3의 배수 번째 발동이 대능력 */
+  count: number;
+  /** 대능력 남은 틱 (0이면 꺼져 있음) */
+  ultimateTicks: number;
+  /** 대능력이 시작된 뒤 지난 틱 (박스 움직임의 기준) */
+  ultimateElapsed: number;
+  /** 박스에 쌓인 코인 (대능력이 끝나면 터져서 코인으로 지급) */
+  boxCoins: number;
+}
+
 export interface SimState {
   tick: number;
   outcome: Outcome;
@@ -61,6 +77,7 @@ export interface SimState {
   /** 거대화용: 폭이 giantGapBridge 미만인 구멍을 메운 구간 */
   giantGround: [number, number][];
   stage: StageData;
+  skill: SkillState | null;
   debugInvincible: boolean;
 }
 
@@ -72,5 +89,9 @@ export type SimEvent =
   | { type: 'hit'; id: number; damage: number }
   | { type: 'smash'; id: number }
   | { type: 'effectEnd'; effect: EffectName }
+  | { type: 'skillMinor'; destroyed: number }
+  | { type: 'ultimateStart' }
+  | { type: 'boxHit'; id: number; boxCoins: number }
+  | { type: 'ultimateEnd'; coins: number; x: number; y: number }
   | { type: 'cleared' }
   | { type: 'failed'; reason: 'hp' | 'fall' };

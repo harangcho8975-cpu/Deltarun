@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { characterById, characterIndex, characters, RARITY } from '../data/characters';
+import { ABILITY_LABEL, characterById, characterIndex, characters, RARITY } from '../data/characters';
 import { saveStore } from '../save/store';
 import { button, COLORS, text } from '../ui/style';
 import { fitImage } from './CharacterListScene';
 
 const W = 1280;
 const H = 720;
-const PANEL = { x: 640, y: 104, w: 600, h: 500 };
+const PANEL = { x: 640, y: 104, w: 600, h: 524 };
 
 /**
  * 캐릭터 정보: 왼쪽에 캐릭터를 크게, 오른쪽 패널에 이름·등급·스킬·소개.
@@ -51,7 +51,7 @@ export class CharacterInfoScene extends Phaser.Scene {
     this.buildPanel(c, r, selected);
 
     // 오른쪽 아래 [선택하기]
-    const pick = button(this, 1090, 656, 300, 84, selected ? '선택 중' : '선택하기', () => this.pick(), COLORS.accent, 34);
+    const pick = button(this, 1090, 674, 300, 80, selected ? '선택 중' : '선택하기', () => this.pick(), COLORS.accent, 34);
     if (selected) pick.setEnabled(false);
 
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
@@ -83,17 +83,32 @@ export class CharacterInfoScene extends Phaser.Scene {
 
     g.fillStyle(0xe3e6ef, 1).fillRect(left, y + 190, inner, 2);
 
-    // 스킬
-    text(this, left, y + 208, '스킬', 20, '#8a90a8', true);
-    text(this, left, y + 236, c.skill.name, 28, '#1a1a2e', true);
-    text(this, left, y + 276, c.skill.description, 21, '#33384d').setWordWrapWidth(inner, true);
-    if (!c.skill.active) text(this, left, y + 312, '스킬 효과는 준비 중이에요 (아직 게임에 적용되지 않음)', 16, '#a0a6ba');
+    // 능력 목록: 소능력·대능력 (없으면 '능력 없음')
+    let cy = y + 204;
+    if (c.abilities.length === 0) {
+      text(this, left, cy, '능력 없음', 26, '#1a1a2e', true);
+      text(this, left, cy + 38, '점프와 슬라이드만으로 승부해요.', 18, '#4a5068');
+      cy += 76;
+    }
+    for (const a of c.abilities) {
+      const pill = this.add.graphics();
+      pill.fillStyle(a.kind === 'ultimate' ? COLORS.accent : 0x4a90e2, 1).fillRoundedRect(left, cy + 2, 68, 28, 14);
+      text(this, left + 34, cy + 16, ABILITY_LABEL[a.kind], 15, a.kind === 'ultimate' ? '#1a1a2e' : '#ffffff', true).setOrigin(0.5);
+      text(this, left + 82, cy, a.name, 24, '#1a1a2e', true);
+      const desc = text(this, left, cy + 36, a.description, 17, '#33384d').setWordWrapWidth(inner, true).setLineSpacing(3);
+      cy += 36 + desc.height;
+      if (!a.active) {
+        text(this, left, cy + 4, '준비 중 (아직 게임에 적용되지 않음)', 14, '#a0a6ba');
+        cy += 22;
+      }
+      cy += 14;
+    }
 
-    g.fillStyle(0xe3e6ef, 1).fillRect(left, y + 346, inner, 2);
+    g.fillStyle(0xe3e6ef, 1).fillRect(left, cy, inner, 2);
 
     // 소개
-    text(this, left, y + 364, '소개', 20, '#8a90a8', true);
-    text(this, left, y + 394, c.story, 20, '#33384d').setWordWrapWidth(inner, true).setLineSpacing(6);
+    text(this, left, cy + 12, '소개', 18, '#8a90a8', true);
+    text(this, left, cy + 38, c.story, 18, '#33384d').setWordWrapWidth(inner, true).setLineSpacing(4);
   }
 
   private go(dir: 1 | -1): void {

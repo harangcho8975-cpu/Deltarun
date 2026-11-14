@@ -2,9 +2,10 @@ import Phaser from 'phaser';
 import { gameConfig as cfg } from '../config/gameConfig';
 import type { StageData } from '../data/schema';
 import { playerBox } from '../sim/collision';
+import { ultimateBox } from '../sim/skills';
 import type { Entity, EntityKind, SimEvent, SimState } from '../sim/types';
-import { characterById } from '../data/characters';
-import { saveStore } from '../save/store';
+import { activeCharacter } from '../ui/activeCharacter';
+import { FONT } from '../ui/style';
 import { ANIM_PREFIX } from './assets';
 
 const W = 1280;
@@ -58,6 +59,8 @@ export class WorldRenderer {
   private goal: Phaser.GameObjects.Graphics;
   private fxPool: Phaser.GameObjects.Image[] = [];
   private flash: Phaser.GameObjects.Rectangle;
+  private chaosBox!: Phaser.GameObjects.Image;
+  private chaosLabel!: Phaser.GameObjects.Text;
   private debugGfx: Phaser.GameObjects.Graphics | null = null;
   private playerAnim = '';
   renderCameraX = 0;
@@ -82,6 +85,15 @@ export class WorldRenderer {
     this.player = scene.add.sprite(0, 0, 'player_run').setOrigin(0.5, 1).setDepth(20);
     for (let i = 0; i < 24; i++) this.fxPool.push(scene.add.image(-1000, -1000, 'jelly_normal').setDepth(30).setVisible(false));
     this.flash = scene.add.rectangle(0, 0, W, H, 0xff0000, 0).setOrigin(0).setDepth(40);
+    // 카오스 킹 대능력 박스 (그림 자리: fx_chaos_box)와 쌓인 코인 표시
+    this.chaosBox = scene.add.image(0, 0, 'fx_chaos_box').setOrigin(0, 1).setDepth(24).setVisible(false);
+    this.chaosLabel = scene.add
+      .text(0, 0, '', { fontFamily: FONT, fontSize: '44px', color: '#ffd23f', fontStyle: 'bold' })
+      .setResolution(2)
+      .setOrigin(0.5)
+      .setStroke('#1a1a2e', 8)
+      .setDepth(25)
+      .setVisible(false);
     if (debug) this.debugGfx = scene.add.graphics().setDepth(50);
   }
 
@@ -143,6 +155,7 @@ export class WorldRenderer {
     }
 
     this.syncPlayer(s, py);
+    this.syncBox(s, cam);
     if (this.debugGfx) this.drawDebug(s, cam);
   }
 
@@ -168,8 +181,18 @@ export class WorldRenderer {
 
   /** 선택한 캐릭터 전용 스프라이트(<id>_<포즈>)가 있으면 그것, 없으면 공용 player_<포즈> */
   private spriteKey(pose: string): string {
-    const own = `${characterById(saveStore.data.selectedCharacter).id}_${pose}`;
+    const own = `${activeCharacter().id}_${pose}`;
     return this.scene.textures.exists(own) ? own : `player_${pose}`;
+  }
+
+  /** 대능력 박스: 오른쪽에서 위아래로 움직이며, 쌓인 코인을 박스 안에 보여 준다 */
+  private syncBox(s: SimState, cam: number): void {
+    const b = ultimateBox(s);
+    this.chaosBox.setVisible(!!b);
+    this.chaosLabel.setVisible(!!b);
+    if (!b) return;
+    this.chaosBox.setPosition(b.x - cam, b.y).setDisplaySize(b.w, b.h);
+    this.chaosLabel.setPosition(b.x - cam + b.w / 2, b.y - b.h / 2).setText(`+${s.skill!.boxCoins}`);
   }
 
   private drawDebug(s: SimState, cam: number): void {
@@ -208,9 +231,43 @@ export class WorldRenderer {
         this.flash.setFillStyle(0xff0000, 0.25);
         this.scene.tweens.add({ targets: this.flash, fillAlpha: 0, duration: 250 });
         break;
+      case 'skillMinor': {
+        // 화면 전체가 하얗게 번쩍이고 충격파가 퍼진다
+        this.flash.setFillStyle(0xffffff, 0.4);
+        this.scene.tweens.add({ targets: this.flash, fillAlpha: 0, duration: 260 });
+        this.scene.cameras.main.shake(140, 0.007);
+        this.shockwave(0xffffff);
+        break;
+      }
+      case 'ultimateStart':
+        this.flash.setFillStyle(0xa66cff, 0.45);
+        this.scene.tweens.add({ targets: this.flash, fillAlpha: 0, duration: 400 });
+        this.scene.cameras.main.shake(220, 0.009);
+        break;
+      case 'boxHit': {
+        const e = s.entities[ev.id];
+        this.burst('coin', e.x + e.w / 2 - cam, e.y - e.h / 2, 'up');
+        break;
+      }
+      case 'ultimateEnd': {
+        // 박스가 폭발하며 모인 코인이 사방으로 쏟아진다
+        const x = ev.x - cam;
+        this.flash.setFillStyle(0xffb347, 0.5);
+        this.scene.tweens.add({ targets: this.flash, fillAlpha: 0, duration: 450 });
+        this.scene.cameras.main.shake(260, 0.012);
+        this.shockwave(0xffd23f, x, ev.y);
+        const n = Math.min(this.fxPool.length, 6 + Math.floor(ev.coins / 10));
+        for (let i = 0; i < n; i++) this.burst('coin', x, ev.y, 'fly');
+        break;
+      }
       default:
         break;
     }
+  }
+
+  private shockwave(color: number, x = W / 2, y = H / 2): void {
+    const ring = this.scene.add.circle(x, y, 40).setStrokeStyle(10, color).setFillStyle(color, 0).setDepth(35);
+    this.scene.tweens.add({ targets: ring, scale: 14, alpha: 0, duration: 420, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
   }
 
   private burst(key: string, x: number, y: number, mode: 'up' | 'pop' | 'fly'): void {
