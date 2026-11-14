@@ -60,15 +60,16 @@ export const fullscreen = {
   },
 
   /**
-   * 홈 화면 앱으로 설치돼 실행 중인가. 이때는 이미 전체화면이다.
-   * 주의: 전체화면 API로 들어간 상태도 display-mode: fullscreen으로 잡히므로, API 전체화면 중에는 설치 앱으로 보지 않는다.
+   * 홈 화면에 설치한 앱으로 실행 중인가 (이때 브라우저 전체화면 요청은 필요 없다).
+   * 주의: display-mode: fullscreen은 여기서 보지 않는다. 브라우저가 전체화면처럼 보이는 상태도 이 값이 true가 되어,
+   * 그러면 다시 진입하는 코드가 막혀 버린다.
    */
   standalone(): boolean {
-    if (isFullscreen()) return false;
-    return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches ||
+    return matchMedia('(display-mode: standalone)').matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true;
   },
 
+  /** 지금 전체화면인가 (또는 설치 앱이라 따로 할 일이 없는가) */
   active(): boolean {
     return isFullscreen() || this.standalone();
   },

@@ -154,6 +154,10 @@ test('휴대폰: 첫 터치로 전체화면, 뒤로가기 한 번이면 페이�
 
   await page.tap('#game canvas', { position: { x: 20, y: 20 } }); // 첫 터치
   await expect.poll(isFs).toBe(true);
+  // 전체화면 뒤에도 게임 화면이 작아지지 않는다 (높이의 90% 이상을 채움)
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector('#game canvas')!.getBoundingClientRect().height / window.innerHeight))
+    .toBeGreaterThan(0.9);
 
   await page.goBack();
   await expect.poll(isFs).toBe(false);

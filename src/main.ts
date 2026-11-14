@@ -42,3 +42,14 @@ if (matchMedia('(pointer: coarse)').matches) {
     if (!fullscreen.active()) void fullscreen.enter();
   });
 }
+
+// 전체화면·회전으로 화면 크기가 바뀌면 캔버스 크기를 다시 맞춘다 (브라우저마다 resize 이벤트가 늦게 와서 작게 남는 문제 방지)
+const refreshScale = () => {
+  game.scale.refresh();
+  setTimeout(() => game.scale.refresh(), 150);
+  setTimeout(() => game.scale.refresh(), 500);
+};
+document.addEventListener('fullscreenchange', refreshScale);
+window.addEventListener('resize', refreshScale);
+window.addEventListener('orientationchange', refreshScale);
+window.visualViewport?.addEventListener('resize', refreshScale);
