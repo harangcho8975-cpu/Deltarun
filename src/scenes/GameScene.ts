@@ -180,7 +180,6 @@ export class GameScene extends Phaser.Scene {
           break;
         case 'ultimateEnd':
           Sound.play(this, 'sfx_coin');
-          this.events.emit('popup', ev.released ? `코인 ${ev.coins}개가 쏟아져요!` : `+${ev.coins} 코인`);
           break;
         case 'dropCollect':
           Sound.play(this, 'sfx_coin', 0.3);

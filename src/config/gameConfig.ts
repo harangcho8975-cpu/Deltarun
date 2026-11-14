@@ -59,6 +59,8 @@ export const gameConfig = {
       ultimateEvery: 3, // 3번째 발동은 소능력 대신 대능력
       ultimateTicks: 360, // 대능력 6초
       coinsPerObstacle: 10, // 박스가 부순 장애물 하나당 적립 코인
+      invulnAfterMinorTicks: 30, // 소능력 발동 직후 무적 (0.5초)
+      invulnAfterUltimateTicks: 60, // 대능력이 끝난 직후 무적 (1초)
       // 대능력이 끝나면 쌓인 코인이 하나하나 떨어져 바닥에서 튕기고, 플레이어가 직접 주워야 지급된다
       drop: {
         gravity: 2600, // px/s²
@@ -91,7 +93,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 4;
+export const SIM_VERSION = 5;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {

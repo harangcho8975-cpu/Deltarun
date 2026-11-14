@@ -232,17 +232,15 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
     expect(s.coins).toBe(0);
   });
 
-  it('구멍 위에서는 바닥이 없어 한 번도 튕기지 않고 떨어져 사라진다 (주울 수 없다)', () => {
+  it('구멍 위에서도 빠지지 않고 바닥에서 튕기다 멈춘다 (예외 없음)', () => {
     const s = skillSim({ length: 40000, ground: [[0, 1000], [9000, 40000]], goalX: 39000 }); // 1000~9000 구멍
-    s.drops.push({ id: 1, x: s.cameraX + 1500, y: 300, vx: 0, vy: 0, delay: 0, bounces: 0, settled: false });
-    let maxBounces = 0;
-    for (let i = 0; i < 400 && s.drops.length > 0; i++) {
-      updateDrops(s, []);
-      maxBounces = Math.max(maxBounces, s.drops[0]?.bounces ?? 0);
+    for (let i = 0; i < 12; i++) {
+      s.drops.push({ id: i, x: s.cameraX + 1500 + i * 30, y: 300, vx: (i - 6) * 30, vy: -600, delay: 0, bounces: 0, settled: false });
     }
-    expect(maxBounces).toBe(0);
-    expect(s.drops).toHaveLength(0); // 화면 아래로 떨어져 사라짐
-    expect(s.coins).toBe(0);
+    for (let i = 0; i < 300; i++) updateDrops(s, []);
+    expect(s.drops).toHaveLength(12); // 하나도 사라지지 않았다
+    expect(s.drops.every((d) => d.settled && d.y === DROP_FLOOR_Y)).toBe(true);
+    expect(s.drops.every((d) => d.bounces >= 1)).toBe(true);
   });
 
   it('판이 끝나는 순간 대능력이 남아 있으면 더 주울 수 없으므로 바로 지급한다 (떨어뜨리지 않음)', () => {
@@ -253,5 +251,45 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
     expect(s.drops).toHaveLength(0);
     const end = ev.find(([, e]) => e.type === 'ultimateEnd')![1];
     expect(end).toMatchObject({ released: false });
+  });
+});
+
+describe('소능력·대능력 직후 무적', () => {
+  it('소능력을 쓴 직후 무적 30틱', () => {
+    const s = skillSim();
+    s.debugInvincible = false; // 무적 디버그를 끄고 실제 무적시간을 본다
+    runTagged(s, 239);
+    expect(s.player.invulnTicks).toBe(0);
+    runTagged(s, 1); // 240틱째 소능력 발동
+    expect(s.skill!.count).toBe(1);
+    expect(s.player.invulnTicks).toBe(cfg.skills.chaosKing.invulnAfterMinorTicks);
+    expect(cfg.skills.chaosKing.invulnAfterMinorTicks).toBe(30);
+  });
+
+  it('대능력이 끝난 직후 무적 60틱 (시작할 때는 아님)', () => {
+    const s = skillSim();
+    s.debugInvincible = false;
+    runTagged(s, 720); // 3번째 발동 = 대능력 시작
+    expect(s.skill!.ultimateTicks).toBeGreaterThan(0);
+    // 시작한 틱에는 소능력의 무적(480틱, 30틱)이 이미 지났고 대능력 때문에 새로 생기지 않는다
+    expect(s.player.invulnTicks).toBe(0);
+    runTagged(s, 360); // 1080틱: 대능력 종료
+    expect(s.skill!.ultimateTicks).toBe(0);
+    expect(s.player.invulnTicks).toBe(cfg.skills.chaosKing.invulnAfterUltimateTicks);
+    expect(cfg.skills.chaosKing.invulnAfterUltimateTicks).toBe(60);
+  });
+
+  it('무적 중에는 소능력으로 못 부순 장애물에 맞아도 피해를 입지 않는다', () => {
+    // 소능력이 나가는 240틱에 화면 밖(카메라 오른쪽)에 있던 장애물은 부서지지 않고, 곧 플레이어에게 닿는다
+    // 대신 같은 틱에 이미 쌓인 무적(30틱) 덕분에 피해가 없다. 플레이어에 가장 먼저 닿는 장애물을 골라 시험한다.
+    const s = skillSim({ obstacles: [obstacle(1900)] }); // 속도 300: 240틱에 카메라 1200, 플레이어 x 1440~1496
+    s.debugInvincible = false;
+    runTagged(s, 240);
+    // 소능력은 화면 안(1200~2480)의 장애물 1900을 부쉈으므로 히트가 없다 → 무적 상태만 확인
+    expect(s.player.invulnTicks).toBeGreaterThan(0);
+    const hpBefore = s.player.hp;
+    runTagged(s, 30);
+    // 30틱 동안은 체력이 시간 흐름(초당 1.5)만큼만 줄고 피격 피해(15)는 없다
+    expect(hpBefore - s.player.hp).toBeLessThan(2);
   });
 });

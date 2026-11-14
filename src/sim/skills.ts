@@ -5,7 +5,7 @@
 //    대능력 중에는 소능력이 발동하지 않고, 발동 타이머도 멈춘다. 끝나면 타이머가 다시 4초부터 시작한다.
 // 박스 움직임은 사인 함수 대신 smoothstep(사칙연산만)을 써서 브라우저가 달라도 결과가 같다.
 import { gameConfig as cfg, TICK_RATE } from '../config/gameConfig';
-import { inSegments, overlaps, playerBox, type Box } from './collision';
+import { overlaps, playerBox, type Box } from './collision';
 import type { DropCoin, Entity, SimEvent, SimState } from './types';
 
 const isObstacle = (e: Entity) => e.kind.startsWith('obstacle_');
@@ -76,6 +76,8 @@ function endUltimate(s: SimState, box: Box, events: SimEvent[], release: boolean
   k.ultimateElapsed = 0;
   k.boxCoins = 0;
   k.timer = cfg.skills[k.id].intervalTicks;
+  // 대능력이 끝난 직후 잠깐 무적
+  s.player.invulnTicks = Math.max(s.player.invulnTicks, cfg.skills[k.id].invulnAfterUltimateTicks);
 }
 
 /** 4장 8.6번: 떨어진 코인의 움직임과 줍기. 상자 안에서 대기 → 날아오름 → 바닥에서 튕김 → 멈춤 → 줍거나 화면 밖으로 사라짐 */
@@ -95,8 +97,8 @@ export function updateDrops(s: SimState, events: SimEvent[]): void {
       c.vy += d.gravity * dt;
       c.x += c.vx * dt;
       c.y += c.vy * dt;
-      // 땅 위에서만 바닥에 닿는다 (구멍 위에서는 그대로 떨어진다)
-      if (c.vy > 0 && c.y >= DROP_FLOOR_Y && inSegments(s.ground, c.x)) {
+      // 어디서든 바닥(y = DROP_FLOOR_Y)에서 튕긴다. 구멍 위라도 빠지지 않는다 (예외 없음)
+      if (c.vy > 0 && c.y >= DROP_FLOOR_Y) {
         c.y = DROP_FLOOR_Y;
         c.bounces++;
         c.vy = -c.vy * d.bounce;
@@ -164,6 +166,8 @@ export function updateSkill(s: SimState, from: number, to: number, events: SimEv
   }
   events.push({ type: 'skillMinor', destroyed });
   k.timer = c.intervalTicks;
+  // 소능력을 쓴 직후 잠깐 무적
+  s.player.invulnTicks = Math.max(s.player.invulnTicks, c.invulnAfterMinorTicks);
 }
 
 /** 판이 끝났는데 대능력이 남아 있으면 그 자리에서 박스를 터뜨려 코인을 지급한다 */
