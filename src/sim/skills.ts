@@ -62,16 +62,12 @@ function spawnDrops(s: SimState, coins: number, box: Box): void {
   }
 }
 
-/**
- * 대능력 종료. release가 true면 쌓인 코인이 하나하나 떨어져 직접 주워야 지급되고,
- * false(판이 끝난 경우)면 더 주울 수 없으므로 바로 지급한다.
- */
-function endUltimate(s: SimState, box: Box, events: SimEvent[], release: boolean): void {
+/** 대능력 종료. 쌓인 코인이 하나하나 떨어지고, 플레이어가 직접 주워야 지급된다 (예외 없음). */
+function endUltimate(s: SimState, box: Box, events: SimEvent[]): void {
   const k = s.skill!;
   const coins = k.boxCoins;
-  if (release) spawnDrops(s, coins, box);
-  else s.coins += coins;
-  events.push({ type: 'ultimateEnd', coins, x: box.x + box.w / 2, y: box.y - box.h / 2, released: release });
+  spawnDrops(s, coins, box);
+  events.push({ type: 'ultimateEnd', coins, x: box.x + box.w / 2, y: box.y - box.h / 2 });
   k.ultimateTicks = 0;
   k.ultimateElapsed = 0;
   k.boxCoins = 0;
@@ -139,7 +135,7 @@ export function updateSkill(s: SimState, from: number, to: number, events: SimEv
     }
     k.ultimateElapsed++;
     k.ultimateTicks--;
-    if (k.ultimateTicks === 0) endUltimate(s, box, events, true);
+    if (k.ultimateTicks === 0) endUltimate(s, box, events);
     return;
   }
 
@@ -168,10 +164,4 @@ export function updateSkill(s: SimState, from: number, to: number, events: SimEv
   k.timer = c.intervalTicks;
   // 소능력을 쓴 직후 잠깐 무적
   s.player.invulnTicks = Math.max(s.player.invulnTicks, c.invulnAfterMinorTicks);
-}
-
-/** 판이 끝났는데 대능력이 남아 있으면 그 자리에서 박스를 터뜨려 코인을 지급한다 */
-export function flushSkill(s: SimState, events: SimEvent[]): void {
-  if (!s.skill || s.skill.ultimateTicks <= 0) return;
-  endUltimate(s, ultimateBox(s)!, events, false);
 }

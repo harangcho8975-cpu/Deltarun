@@ -108,7 +108,7 @@ export type SimEvent =
   | { type: 'skillMinor'; destroyed: number }
   | { type: 'ultimateStart' }
   | { type: 'boxHit'; id: number; boxCoins: number }
-  | { type: 'ultimateEnd'; coins: number; x: number; y: number; released: boolean }
+  | { type: 'ultimateEnd'; coins: number; x: number; y: number }
   | { type: 'dropCollect'; id: number; x: number; y: number }
   | { type: 'cleared' }
   | { type: 'failed'; reason: 'hp' | 'fall' };

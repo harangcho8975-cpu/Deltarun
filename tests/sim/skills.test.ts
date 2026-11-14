@@ -93,15 +93,6 @@ describe('카오스 킹 대능력', () => {
     expect(types(ev, 'boxHit')).toHaveLength(0);
     expect(alive(s, 4800)).toBe(true);
   });
-
-  it('대능력 중에 판이 끝나면 쌓인 코인을 바로 지급한다', () => {
-    const s = skillSim({ goalX: 5200, obstacles: [obstacle(5000)] });
-    const ev = runTagged(s, 1200);
-    expect(s.outcome).toBe('cleared');
-    expect(s.skill!.ultimateTicks).toBe(0);
-    expect(s.coins).toBe(10);
-    expect(types(ev, 'ultimateEnd')).toHaveLength(1);
-  });
 });
 
 describe('스킬이 없는 캐릭터', () => {
@@ -157,7 +148,7 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
   it('쌓인 코인 전부(30개)가 코인 객체로 쏟아지고, 아직 지급되지 않는다', () => {
     const { s, ev } = toEnd();
     const end = ev.find(([, e]) => e.type === 'ultimateEnd')![1];
-    expect(end).toMatchObject({ type: 'ultimateEnd', coins: 30, released: true });
+    expect(end).toMatchObject({ type: 'ultimateEnd', coins: 30 });
     expect(s.drops).toHaveLength(30); // 모든 코인이 하나하나 떨어진다
     expect(s.coins).toBe(0); // 줍기 전에는 지급되지 않는다
     expect(s.skill!.boxCoins).toBe(0);
@@ -243,14 +234,14 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
     expect(s.drops.every((d) => d.bounces >= 1)).toBe(true);
   });
 
-  it('판이 끝나는 순간 대능력이 남아 있으면 더 주울 수 없으므로 바로 지급한다 (떨어뜨리지 않음)', () => {
+  it('판이 끝나도 쌓인 코인을 바로 지급하지 않는다 (예외 없음: 주워야만 지급)', () => {
     const s = skillSim({ goalX: 5200, obstacles: [obstacle(5000)] });
     const ev = runTagged(s, 1200);
     expect(s.outcome).toBe('cleared');
-    expect(s.coins).toBe(10);
+    expect(s.skill!.ultimateTicks).toBeGreaterThan(0); // 대능력이 아직 끝나지 않은 채 판이 끝남
+    expect(s.coins).toBe(0); // 바로 지급하지 않는다
     expect(s.drops).toHaveLength(0);
-    const end = ev.find(([, e]) => e.type === 'ultimateEnd')![1];
-    expect(end).toMatchObject({ released: false });
+    expect(types(ev, 'ultimateEnd')).toHaveLength(0);
   });
 });
 

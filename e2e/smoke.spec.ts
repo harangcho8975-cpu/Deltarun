@@ -245,3 +245,34 @@ test('카오스 킹 대능력이 끝나면 쌓인 코인이 모두 떨어져 바
   await expect.poll(async () => (await st()).coins, { timeout: 30_000, intervals: [100] }).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
+
+test('카오스 킹: 대능력이 끝난 직후 무적 동안 캐릭터가 깜빡인다', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors = collectErrors(page);
+  const sample = () =>
+    page.evaluate(() => {
+      const g = window.__deltaRun!.game.scene.getScene('Game') as unknown as {
+        sim: { tick: number; player: { invulnTicks: number }; skill: { ultimateTicks: number } };
+        world: { player: { visible: boolean } };
+      };
+      return { tick: g.sim.tick, inv: g.sim.player.invulnTicks, vis: g.world.player.visible, ult: g.sim.skill.ultimateTicks };
+    });
+
+  await page.goto('/?char=chaosking&stage=stage_01');
+  // 대능력이 끝나는 1080틱 바로 뒤부터 무적(60틱 = 약 1초) 동안 캐릭터가 보였다 안 보였다 하는지 센다
+  await expect.poll(async () => (await sample()).tick, { timeout: 150_000, intervals: [50] }).toBeGreaterThan(1080);
+  const seen: boolean[] = [];
+  const first = await sample();
+  expect(first.ult).toBe(0);
+  expect(first.inv).toBeGreaterThan(0); // 대능력이 끝난 직후라 무적 중
+  for (let i = 0; i < 60; i++) {
+    const s = await sample();
+    if (s.inv > 0) seen.push(s.vis);
+    await page.waitForTimeout(16);
+  }
+  let toggles = 0;
+  for (let i = 1; i < seen.length; i++) if (seen[i] !== seen[i - 1]) toggles++;
+  expect(seen.includes(true) && seen.includes(false)).toBe(true); // 보였다 안 보였다 한다
+  expect(toggles).toBeGreaterThanOrEqual(3); // 한 번이 아니라 여러 번 깜빡인다
+  expect(errors).toEqual([]);
+});

@@ -4,7 +4,7 @@ import { overlaps, playerBox } from './collision';
 import { applyItem, applyMagnet, tickTimers } from './items';
 import { updateGround, updateJumpBuffer, updatePlayer } from './player';
 import { distanceMeters } from './scoring';
-import { flushSkill, updateDrops, updateSkill } from './skills';
+import { updateDrops, updateSkill } from './skills';
 import { activeRange } from './spatialIndex';
 import type { InputFrame, SimEvent, SimState } from './types';
 
@@ -16,7 +16,7 @@ function fail(s: SimState, reason: 'hp' | 'fall', events: SimEvent[]): void {
 }
 
 /** 시뮬레이션을 정확히 1틱(1/60초) 전진시킨다. 순서는 구현 설계 4장과 같다. */
-function stepTick(s: SimState, input: InputFrame): SimEvent[] {
+export function step(s: SimState, input: InputFrame): SimEvent[] {
   const events: SimEvent[] = [];
   if (s.outcome !== 'playing') return events;
   const p = s.player;
@@ -118,12 +118,5 @@ function stepTick(s: SimState, input: InputFrame): SimEvent[] {
 
   // 11.
   s.tick++;
-  return events;
-}
-
-/** 시뮬레이션을 정확히 1틱(1/60초) 전진시킨다. 순서는 구현 설계 4장과 같다. */
-export function step(s: SimState, input: InputFrame): SimEvent[] {
-  const events = stepTick(s, input);
-  if (s.outcome !== 'playing') flushSkill(s, events); // 판이 끝났으면 박스 코인을 지급
   return events;
 }
