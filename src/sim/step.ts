@@ -4,7 +4,7 @@ import { overlaps, playerBox } from './collision';
 import { applyItem, applyMagnet, tickTimers } from './items';
 import { updateGround, updateJumpBuffer, updatePlayer } from './player';
 import { distanceMeters } from './scoring';
-import { flushSkill, updateSkill } from './skills';
+import { flushSkill, updateDrops, updateSkill } from './skills';
 import { activeRange } from './spatialIndex';
 import type { InputFrame, SimEvent, SimState } from './types';
 
@@ -58,6 +58,9 @@ function stepTick(s: SimState, input: InputFrame): SimEvent[] {
 
   // 8.5 캐릭터 스킬
   updateSkill(s, from, to, events);
+
+  // 8.6 대능력이 끝난 뒤 떨어진 코인
+  updateDrops(s, events);
 
   // 9. 충돌
   const pb = playerBox(s);

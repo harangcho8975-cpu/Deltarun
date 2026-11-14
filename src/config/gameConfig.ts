@@ -59,6 +59,16 @@ export const gameConfig = {
       ultimateEvery: 3, // 3번째 발동은 소능력 대신 대능력
       ultimateTicks: 360, // 대능력 6초
       coinsPerObstacle: 10, // 박스가 부순 장애물 하나당 적립 코인
+      // 대능력이 끝나면 쌓인 코인이 하나하나 떨어져 바닥에서 튕기고, 플레이어가 직접 주워야 지급된다
+      drop: {
+        gravity: 2600, // px/s²
+        bounce: 0.42, // 바닥에 닿을 때 남는 속도 비율 (작을수록 덜 튕김)
+        settleSpeed: 150, // 튕기는 속도가 이보다 작아지면 멈춘다
+        vxRange: 300, // 튀어나올 때 가로 속도 ±
+        vyMin: -1000, // 튀어나올 때 위로 가는 속도 범위
+        vyMax: -500,
+        delayMaxTicks: 24, // 한꺼번에가 아니라 0~0.4초 사이에 하나씩 튀어나옴
+      },
       box: {
         w: 480, // 가로로 긴 상자
         h: 260,
@@ -81,7 +91,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 3;
+export const SIM_VERSION = 4;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {

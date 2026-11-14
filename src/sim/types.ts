@@ -56,6 +56,19 @@ export interface SkillState {
   boxCoins: number;
 }
 
+/** 대능력이 끝나면 상자에서 쏟아지는 코인 한 개. 주워야 코인이 지급된다 (월드 좌표, 중심 기준). */
+export interface DropCoin {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  /** 아직 상자 안에서 튀어나오기를 기다리는 틱 (0이면 날아다니는 중) */
+  delay: number;
+  bounces: number;
+  settled: boolean;
+}
+
 export interface SimState {
   tick: number;
   outcome: Outcome;
@@ -78,6 +91,9 @@ export interface SimState {
   giantGround: [number, number][];
   stage: StageData;
   skill: SkillState | null;
+  /** 대능력이 끝난 뒤 바닥에 떨어져 있는 코인들 */
+  drops: DropCoin[];
+  nextDropId: number;
   debugInvincible: boolean;
 }
 
@@ -92,6 +108,7 @@ export type SimEvent =
   | { type: 'skillMinor'; destroyed: number }
   | { type: 'ultimateStart' }
   | { type: 'boxHit'; id: number; boxCoins: number }
-  | { type: 'ultimateEnd'; coins: number; x: number; y: number }
+  | { type: 'ultimateEnd'; coins: number; x: number; y: number; released: boolean }
+  | { type: 'dropCollect'; id: number; x: number; y: number }
   | { type: 'cleared' }
   | { type: 'failed'; reason: 'hp' | 'fall' };

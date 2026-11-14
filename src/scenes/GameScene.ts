@@ -146,7 +146,6 @@ export class GameScene extends Phaser.Scene {
 
     const alpha = this.paused || this.finished || this.frozen ? 1 : this.acc / TICK_MS;
     this.world.sync(s, this.prev, alpha);
-    this.world.updateFx(delta);
     this.events.emit('hud', s, this.controls);
     this.debug?.update(s);
   }
@@ -181,7 +180,10 @@ export class GameScene extends Phaser.Scene {
           break;
         case 'ultimateEnd':
           Sound.play(this, 'sfx_coin');
-          this.events.emit('popup', `폭발! +${ev.coins} 코인`);
+          this.events.emit('popup', ev.released ? `코인 ${ev.coins}개가 쏟아져요!` : `+${ev.coins} 코인`);
+          break;
+        case 'dropCollect':
+          Sound.play(this, 'sfx_coin', 0.3);
           break;
         case 'cleared':
           Sound.play(this, 'sfx_clear');

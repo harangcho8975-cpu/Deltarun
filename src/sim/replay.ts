@@ -81,6 +81,7 @@ export function hashState(s: SimState): string {
     s.boostGroundGrace, s.jellyScore, s.jelliesTaken, s.coins, s.cursor,
   ];
   if (s.skill) parts.push(s.skill.timer, s.skill.count, s.skill.ultimateTicks, s.skill.ultimateElapsed, s.skill.boxCoins);
+  if (s.drops.length) parts.push(s.drops.map((d) => `${d.id}:${d.x.toFixed(3)}:${d.y.toFixed(3)}:${d.delay}:${d.settled ? 1 : 0}`).join(','));
   let alive = '';
   for (const e of s.entities) alive += e.alive ? '1' : '0';
   return fnv1a(parts.join('|') + '|' + alive);

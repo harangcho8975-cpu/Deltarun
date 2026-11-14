@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameConfig as cfg } from '../../src/config/gameConfig';
 import { cloneSim, hashState, step, ultimateBox, type SimEvent } from '../../src/sim';
+import { DROP_FLOOR_Y, updateDrops } from '../../src/sim/skills';
 import { NONE, flatStage, runTagged, skillSim } from '../helpers';
 
 const types = (ev: [number, SimEvent][], type: SimEvent['type']) => ev.filter(([, e]) => e.type === type);
@@ -60,45 +61,17 @@ describe('카오스 킹 대능력', () => {
     expect(types(ev, 'ultimateEnd').map(([t]) => t)).toEqual([1080, 2160]);
   });
 
-  it('박스가 장애물을 부수고 하나당 코인 10개를 박스에 쌓았다가, 끝나면 한꺼번에 지급한다', () => {
+  it('박스가 장애물을 부수고 하나당 코인 10개를 박스에 쌓는다 (끝나기 전엔 아직 지급되지 않는다)', () => {
     // 대능력(720~1080틱) 동안 카메라 3600 → 5400. 이 구간에 새로 나타나는 장애물 3개.
     const s = skillSim({ obstacles: [obstacle(5000), obstacle(5400), obstacle(5800), obstacle(9500)] });
     const ev = runTagged(s, 1079);
     expect(types(ev, 'boxHit')).toHaveLength(3);
     expect(types(ev, 'boxHit').map(([, e]) => (e.type === 'boxHit' ? e.boxCoins : 0))).toEqual([10, 20, 30]);
-    expect(s.coins).toBe(0); // 끝나기 전에는 아직 지급되지 않는다
+    expect(s.coins).toBe(0);
+    expect(s.drops).toHaveLength(0);
     expect(s.skill!.boxCoins).toBe(30);
     expect([5000, 5400, 5800].every((x) => !alive(s, x))).toBe(true);
     expect(alive(s, 9500)).toBe(true);
-
-    const end = runTagged(s, 1);
-    const e = end.find(([, x]) => x.type === 'ultimateEnd')![1];
-    expect(e.type === 'ultimateEnd' && e.coins).toBe(30);
-    expect(s.coins).toBe(30);
-    expect(s.skill!.boxCoins).toBe(0);
-  });
-
-  it('박스는 오른쪽에 있고, 아랫변이 460~600 사이를 부드럽게 오르내린다', () => {
-    const s = skillSim();
-    runTagged(s, 720);
-    expect(s.skill!.ultimateTicks).toBe(360);
-    let prev = ultimateBox(s)!.y;
-    let min = prev;
-    let max = prev;
-    let maxStep = 0;
-    for (let t = 0; t < 359; t++) {
-      step(s, NONE);
-      const b = ultimateBox(s)!;
-      expect(b.x - s.cameraX).toBe(cfg.skills.chaosKing.box.screenX);
-      maxStep = Math.max(maxStep, Math.abs(b.y - prev));
-      min = Math.min(min, b.y);
-      max = Math.max(max, b.y);
-      prev = b.y;
-    }
-    expect(min).toBeGreaterThanOrEqual(460);
-    expect(max).toBeLessThanOrEqual(600);
-    expect(max - min).toBeGreaterThan(130); // 위아래 끝까지 움직인다
-    expect(maxStep).toBeLessThan(5); // 순간이동 없이 부드럽다 (틱당 5px 미만)
   });
 
   it('박스는 가로로 긴 모양이고, 화면 오른쪽 끝(x = 1250)에 붙어 있다', () => {
@@ -170,5 +143,115 @@ describe('결정성', () => {
     expect(s.skill!.count).toBe(0);
     expect(c.skill!.count).toBe(1);
     expect(flatStage().id).toBe('test');
+  });
+});
+
+describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야 지급)', () => {
+  const three = () => skillSim({ length: 40000, ground: [[0, 40000]], goalX: 39000, obstacles: [obstacle(5000), obstacle(5400), obstacle(5800)] });
+  const toEnd = () => {
+    const s = three();
+    const ev = runTagged(s, 1080);
+    return { s, ev };
+  };
+
+  it('쌓인 코인 전부(30개)가 코인 객체로 쏟아지고, 아직 지급되지 않는다', () => {
+    const { s, ev } = toEnd();
+    const end = ev.find(([, e]) => e.type === 'ultimateEnd')![1];
+    expect(end).toMatchObject({ type: 'ultimateEnd', coins: 30, released: true });
+    expect(s.drops).toHaveLength(30); // 모든 코인이 하나하나 떨어진다
+    expect(s.coins).toBe(0); // 줍기 전에는 지급되지 않는다
+    expect(s.skill!.boxCoins).toBe(0);
+  });
+
+  it('코인은 상자 안에서 하나씩(0~24틱 사이) 튀어나온다', () => {
+    const { s } = toEnd();
+    const delays = s.drops.map((d) => d.delay);
+    expect(Math.max(...delays)).toBeLessThanOrEqual(24);
+    expect(new Set(delays).size).toBeGreaterThan(5); // 한꺼번에가 아니다
+  });
+
+  // 플레이어와 멀리 떨어진 화면 오른쪽에서 떨어뜨려, 줍는 것과 무관하게 낙하 물리만 본다
+  const farDrops = () => {
+    const s = skillSim({ length: 40000, ground: [[0, 40000]], goalX: 39000 });
+    for (let i = 0; i < 20; i++) {
+      s.drops.push({
+        id: i, x: s.cameraX + 1300 + i * 10, y: 300 + (i % 5) * 20, vx: (i - 10) * 25, vy: -500 - i * 25,
+        delay: 0, bounces: 0, settled: false,
+      });
+    }
+    return s;
+  };
+
+  it('바닥에서 살짝 튕기다 멈춘다 (멈춘 코인은 바닥 높이)', () => {
+    const s = farDrops();
+    for (let i = 0; i < 200; i++) updateDrops(s, []);
+    expect(s.drops).toHaveLength(20);
+    expect(s.drops.every((d) => d.settled)).toBe(true);
+    expect(s.drops.every((d) => d.y === DROP_FLOOR_Y)).toBe(true);
+    expect(s.drops.every((d) => d.bounces >= 1)).toBe(true);
+    expect(s.drops.some((d) => d.bounces >= 2)).toBe(true); // 두세 번 튕긴다
+    expect(s.drops.every((d) => d.bounces <= 6)).toBe(true); // 끝없이 튀지 않는다
+  });
+
+  it('튕기는 높이가 점점 낮아진다', () => {
+    const s = farDrops();
+    const id = 0;
+    const peaks: number[] = [];
+    let prevY = Infinity;
+    let rising = false;
+    for (let t = 0; t < 200; t++) {
+      updateDrops(s, []);
+      const c = s.drops.find((d) => d.id === id)!;
+      if (c.y > prevY && rising) {
+        peaks.push(prevY); // 위로 가다 아래로 바뀐 지점 = 정점
+        rising = false;
+      }
+      if (c.y < prevY) rising = true;
+      prevY = c.y;
+    }
+    expect(peaks.length).toBeGreaterThanOrEqual(2);
+    const heights = peaks.map((y) => DROP_FLOOR_Y - y); // 바닥에서의 높이
+    for (let i = 1; i < heights.length; i++) expect(heights[i]).toBeLessThan(heights[i - 1]);
+  });
+
+  it('달리다가 코인에 닿으면 하나당 코인 +1, 모두 주우면 30', () => {
+    const { s } = toEnd();
+    const ev = runTagged(s, 400);
+    const picked = types(ev, 'dropCollect');
+    expect(s.coins).toBe(picked.length);
+    expect(s.coins).toBe(30);
+    expect(s.drops).toHaveLength(0);
+  });
+
+  it('줍지 못하고 화면 뒤로 지나간 코인은 사라진다', () => {
+    const s = skillSim({ length: 40000, ground: [[0, 40000]], goalX: 39000 });
+    // 플레이어가 점프로 코인을 피한다고 가정: 코인을 플레이어 뒤쪽 먼 곳에 둔다
+    s.drops.push({ id: 1, x: s.cameraX - 500, y: DROP_FLOOR_Y, vx: 0, vy: 0, delay: 0, bounces: 2, settled: true });
+    updateDrops(s, []);
+    expect(s.drops).toHaveLength(0);
+    expect(s.coins).toBe(0);
+  });
+
+  it('구멍 위에서는 바닥이 없어 한 번도 튕기지 않고 떨어져 사라진다 (주울 수 없다)', () => {
+    const s = skillSim({ length: 40000, ground: [[0, 1000], [9000, 40000]], goalX: 39000 }); // 1000~9000 구멍
+    s.drops.push({ id: 1, x: s.cameraX + 1500, y: 300, vx: 0, vy: 0, delay: 0, bounces: 0, settled: false });
+    let maxBounces = 0;
+    for (let i = 0; i < 400 && s.drops.length > 0; i++) {
+      updateDrops(s, []);
+      maxBounces = Math.max(maxBounces, s.drops[0]?.bounces ?? 0);
+    }
+    expect(maxBounces).toBe(0);
+    expect(s.drops).toHaveLength(0); // 화면 아래로 떨어져 사라짐
+    expect(s.coins).toBe(0);
+  });
+
+  it('판이 끝나는 순간 대능력이 남아 있으면 더 주울 수 없으므로 바로 지급한다 (떨어뜨리지 않음)', () => {
+    const s = skillSim({ goalX: 5200, obstacles: [obstacle(5000)] });
+    const ev = runTagged(s, 1200);
+    expect(s.outcome).toBe('cleared');
+    expect(s.coins).toBe(10);
+    expect(s.drops).toHaveLength(0);
+    const end = ev.find(([, e]) => e.type === 'ultimateEnd')![1];
+    expect(end).toMatchObject({ released: false });
   });
 });

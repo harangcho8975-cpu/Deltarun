@@ -84,6 +84,8 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
     skill: opts.skill
       ? { id: opts.skill, timer: cfg.skills[opts.skill].intervalTicks, count: 0, ultimateTicks: 0, ultimateElapsed: 0, boxCoins: 0 }
       : null,
+    drops: [],
+    nextDropId: 0,
     debugInvincible: false,
   };
 }
@@ -95,6 +97,7 @@ export function cloneSim(s: SimState): SimState {
     player: { ...s.player },
     effects: { ...s.effects },
     skill: s.skill ? { ...s.skill } : null,
+    drops: s.drops.map((d) => ({ ...d })),
     entities: s.entities.map((e) => ({ ...e })),
   };
 }
