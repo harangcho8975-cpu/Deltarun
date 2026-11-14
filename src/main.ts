@@ -33,8 +33,9 @@ declare global {
 }
 window.__deltaRun = { game, frozen: false, tick: 0 };
 
-// 휴대폰(터치)에서는 첫 터치 때 전체화면 + 가로 고정을 시도한다.
-// iPhone Safari처럼 지원하지 않는 곳에서는 타이틀의 안내대로 '홈 화면에 추가'하면 전체화면으로 열린다.
+// 휴대폰(터치)에서는 접속 후 첫 터치 때 자동으로 전체화면 + 가로 전환을 한다.
+// 브라우저는 보안상 사용자가 화면을 한 번 누른 뒤에만 전체화면을 허락하므로, 접속 즉시는 불가능하다.
+// iPhone Safari처럼 지원하지 않는 곳에서는 '홈 화면에 추가'로 열면 처음부터 전체화면이다.
 if (matchMedia('(pointer: coarse)').matches) {
   window.addEventListener('pointerup', () => void fullscreen.enter(), { once: true });
 }

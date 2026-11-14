@@ -143,3 +143,24 @@ test('로비 캐릭터를 누르면 격자 목록 → 카드를 누르면 정보
   ).toBe('char_blueberry');
   expect(errors).toEqual([]);
 });
+
+test('휴대폰: 첫 터치로 전체화면, 뒤로가기 한 번이면 페이지를 떠나지 않고 전체화면만 풀린다', async ({ browser }) => {
+  // 휴대폰처럼 터치 입력 + 거친 포인터로 접속한다
+  const ctx = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 844, height: 390 } });
+  const page = await ctx.newPage();
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  const isFs = () => page.evaluate(() => !!document.fullscreenElement);
+  expect(await isFs()).toBe(false);
+
+  await page.tap('#game canvas', { position: { x: 20, y: 20 } }); // 첫 터치
+  await expect.poll(isFs).toBe(true);
+
+  await page.goBack();
+  await expect.poll(isFs).toBe(false);
+  expect(new URL(page.url()).pathname).toBe('/');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  expect(errors).toEqual([]);
+  await ctx.close();
+});
