@@ -274,8 +274,8 @@
     "key": "fx_chaos_box",
     "type": "image",
     "path": null,
-    "width": 240,
-    "height": 360,
+    "width": 480,
+    "height": 260,
     "placeholderColor": "#7b2cbfcc"
   }
 ]

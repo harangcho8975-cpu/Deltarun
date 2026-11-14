@@ -44,6 +44,26 @@ class SpritePool {
   }
 }
 
+/** 월드 좌표로 움직이는 연출용 코인: 튀어나와 → 떨어져 → 바닥에서 살짝 튕기고 → 멈췄다가 사라진다 */
+interface CoinParticle {
+  img: Phaser.GameObjects.Image;
+  active: boolean;
+  wx: number;
+  wy: number;
+  vx: number;
+  vy: number;
+  delayMs: number;
+  settled: boolean;
+  restMs: number;
+  bounces: number;
+}
+
+const COIN_FX_MAX = 80;
+const COIN_FX_SIZE = 36;
+const COIN_GRAVITY = 2600;
+const COIN_BOUNCE = 0.42; // 바닥에 닿을 때 남는 속도 비율 (작을수록 덜 튕김)
+const COIN_FLOOR = cfg.groundY - COIN_FX_SIZE / 2;
+
 export interface RenderSnapshot {
   cameraX: number;
   playerY: number;
@@ -61,6 +81,8 @@ export class WorldRenderer {
   private flash: Phaser.GameObjects.Rectangle;
   private chaosBox!: Phaser.GameObjects.Image;
   private chaosLabel!: Phaser.GameObjects.Text;
+  /** 대능력이 끝날 때 상자에서 튀어나오는 코인 (연출 전용: 코인 지급은 시뮬레이션이 이미 했다) */
+  private coinFx: CoinParticle[] = [];
   private debugGfx: Phaser.GameObjects.Graphics | null = null;
   private playerAnim = '';
   renderCameraX = 0;
@@ -85,6 +107,10 @@ export class WorldRenderer {
     this.player = scene.add.sprite(0, 0, 'player_run').setOrigin(0.5, 1).setDepth(20);
     for (let i = 0; i < 24; i++) this.fxPool.push(scene.add.image(-1000, -1000, 'jelly_normal').setDepth(30).setVisible(false));
     this.flash = scene.add.rectangle(0, 0, W, H, 0xff0000, 0).setOrigin(0).setDepth(40);
+    for (let i = 0; i < COIN_FX_MAX; i++) {
+      const img = scene.add.image(-1000, -1000, 'coin').setDisplaySize(COIN_FX_SIZE, COIN_FX_SIZE).setDepth(31).setVisible(false);
+      this.coinFx.push({ img, active: false, wx: 0, wy: 0, vx: 0, vy: 0, delayMs: 0, settled: false, restMs: 0, bounces: 0 });
+    }
     // 카오스 킹 대능력 박스 (그림 자리: fx_chaos_box)와 쌓인 코인 표시
     this.chaosBox = scene.add.image(0, 0, 'fx_chaos_box').setOrigin(0, 1).setDepth(24).setVisible(false);
     this.chaosLabel = scene.add
@@ -251,17 +277,79 @@ export class WorldRenderer {
       }
       case 'ultimateEnd': {
         // 박스가 폭발하며 모인 코인이 사방으로 쏟아진다
-        const x = ev.x - cam;
         this.flash.setFillStyle(0xffb347, 0.5);
         this.scene.tweens.add({ targets: this.flash, fillAlpha: 0, duration: 450 });
         this.scene.cameras.main.shake(260, 0.012);
-        this.shockwave(0xffd23f, x, ev.y);
-        const n = Math.min(this.fxPool.length, 6 + Math.floor(ev.coins / 10));
-        for (let i = 0; i < n; i++) this.burst('coin', x, ev.y, 'fly');
+        this.shockwave(0xffd23f, ev.x - cam, ev.y);
+        this.spawnCoinShower(ev.x, ev.y, ev.coins);
         break;
       }
       default:
         break;
+    }
+  }
+
+  /** 상자 안에서 코인이 하나씩 튀어나온다. 많이 쌓였을수록 많이 (최대 80개) */
+  private spawnCoinShower(wx: number, wy: number, coins: number): void {
+    const n = Math.min(COIN_FX_MAX, Math.max(8, Math.ceil(coins / 3)));
+    const free = this.coinFx.filter((p) => !p.active);
+    for (let i = 0; i < Math.min(n, free.length); i++) {
+      const p = free[i];
+      const r = (a: number, b: number) => a + Math.random() * (b - a);
+      p.active = true;
+      p.settled = false;
+      p.restMs = 0;
+      p.bounces = 0;
+      p.wx = wx + r(-this.boxHalfW() * 0.6, this.boxHalfW() * 0.6);
+      p.wy = wy + r(-50, 50);
+      p.vx = r(-300, 300);
+      p.vy = r(-1000, -500); // 위로 튀어 오른 뒤 떨어진다
+      p.delayMs = r(0, 380); // 한꺼번에가 아니라 하나씩 튀어나오는 느낌
+      p.img.setVisible(false).setAlpha(1);
+    }
+  }
+
+  private boxHalfW(): number {
+    return cfg.skills.chaosKing.box.w / 2;
+  }
+
+  /** 연출용 코인 움직임. 월드 좌표라 카메라가 움직이면 화면에서는 뒤로 흘러간다. */
+  updateFx(dtMs: number): void {
+    const dt = Math.min(dtMs, 50) / 1000;
+    for (const p of this.coinFx) {
+      if (!p.active) continue;
+      if (p.delayMs > 0) {
+        p.delayMs -= dtMs;
+        continue;
+      }
+      if (!p.settled) {
+        p.vy += COIN_GRAVITY * dt;
+        p.wx += p.vx * dt;
+        p.wy += p.vy * dt;
+        p.img.angle += p.vx * dt * 0.8;
+        if (p.wy >= COIN_FLOOR && p.vy > 0) {
+          // 바닥에서 살짝 튕긴다: 속도가 줄어들며 두세 번 튀다가 멈춘다
+          p.wy = COIN_FLOOR;
+          p.bounces++;
+          p.vy = -p.vy * COIN_BOUNCE;
+          p.vx *= 0.6;
+          if (Math.abs(p.vy) < 150) {
+            p.vy = 0;
+            p.vx = 0;
+            p.settled = true;
+            p.img.setAngle(0);
+          }
+        }
+      } else {
+        p.restMs += dtMs;
+        if (p.restMs > 900) p.img.setAlpha(Math.max(0, 1 - (p.restMs - 900) / 500));
+        if (p.restMs > 1400) {
+          p.active = false;
+          p.img.setVisible(false);
+          continue;
+        }
+      }
+      p.img.setVisible(true).setPosition(p.wx - this.renderCameraX, p.wy);
     }
   }
 

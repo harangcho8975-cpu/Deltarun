@@ -101,6 +101,13 @@ describe('카오스 킹 대능력', () => {
     expect(maxStep).toBeLessThan(5); // 순간이동 없이 부드럽다 (틱당 5px 미만)
   });
 
+  it('박스는 가로로 긴 모양이고, 화면 오른쪽 끝(x = 1250)에 붙어 있다', () => {
+    const b = cfg.skills.chaosKing.box;
+    expect(b.w).toBeGreaterThan(b.h * 1.5); // 가로가 세로의 1.5배 이상
+    expect(b.screenX + b.w).toBe(1250);
+    expect(b.screenX + b.w).toBeLessThanOrEqual(cfg.view.width);
+  });
+
   it('박스가 위에 있을 땐 낮은 장애물을 놓친다 (닿는 것만 부순다)', () => {
     // 대능력 시작 직후엔 박스가 가장 높은 곳(아랫변 460)에 있다. 박스 구역 안으로 들어온 낮은 장애물(552~600)은 안 닿는다.
     const s = skillSim({ obstacles: [obstacle(4800, 'obstacle_low')] });

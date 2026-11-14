@@ -43,7 +43,9 @@ export function updatePlayer(s: SimState, events: SimEvent[]): number {
     // 공중에서는 slideHeld를 무시한다: 자세도 낙하 속도도 바뀌지 않는다.
     // 틱 시작·끝 속도의 평균으로 이동 (사다리꼴 적분): 점프 높이가 v²/2g와 맞는다
     const vy0 = p.vy;
-    p.vy = Math.min(p.vy + cfg.gravity / TICK_RATE, cfg.maxFallSpeed);
+    // 올라가는 동안은 gravity, 내려오기 시작하면(vy ≥ 0) gravity × fallGravityScale
+    const g = vy0 >= 0 ? cfg.gravity * cfg.fallGravityScale : cfg.gravity;
+    p.vy = Math.min(vy0 + g / TICK_RATE, cfg.maxFallSpeed);
     p.y += (vy0 + p.vy) / 2 / TICK_RATE;
     if ((p.state === 'jump' || p.state === 'doubleJump') && p.vy >= 0) p.state = 'fall';
     if (p.coyoteTicks > 0) p.coyoteTicks--;

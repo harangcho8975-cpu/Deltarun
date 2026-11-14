@@ -14,7 +14,8 @@ export const gameConfig = {
   deathY: 820,
   playerScreenX: 240,
 
-  gravity: 2600, // px/s²
+  gravity: 2600, // px/s² (올라갈 때)
+  fallGravityScale: 1.25, // 내려올 때(vy ≥ 0) 중력 배율: 올라갈 때보다 빠르게 떨어진다
   jumpVelocity: -960, // px/s
   doubleJumpVelocity: -900,
   maxFallSpeed: 1600,
@@ -59,9 +60,9 @@ export const gameConfig = {
       ultimateTicks: 360, // 대능력 6초
       coinsPerObstacle: 10, // 박스가 부순 장애물 하나당 적립 코인
       box: {
-        w: 240,
-        h: 360,
-        screenX: 1010, // 화면 오른쪽 (왼쪽 끝 기준)
+        w: 480, // 가로로 긴 상자
+        h: 260,
+        screenX: 770, // 화면 오른쪽 (왼쪽 끝 기준, 오른쪽 끝은 x = 1250)
         bottomMin: 460, // 박스 아랫변이 가장 높을 때 y
         bottomMax: 600, // 가장 낮을 때 (바닥)
         periodTicks: 120, // 한 번 오르내리는 데 걸리는 시간 (2초)

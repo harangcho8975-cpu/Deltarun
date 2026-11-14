@@ -120,3 +120,29 @@ describe('플레이어 물리', () => {
     expect(ev2).toContainEqual({ type: 'jump', double: true });
   });
 });
+
+describe('내려올 때 떨어지는 속도', () => {
+  it('올라갈 때보다 빨리 떨어진다 (내려오는 시간이 올라가는 시간의 약 0.89배)', () => {
+    const s = sim();
+    let up = 0;
+    let down = 0;
+    let landed = false;
+    for (let t = 0; t < 200 && !landed; t++) {
+      const ev = run(s, 1, t === 0 ? JUMP : NONE);
+      if (ev.some((e) => e.type === 'land')) landed = true;
+      else if (s.player.vy < 0) up++;
+      else down++;
+    }
+    expect(landed).toBe(true);
+    expect(down).toBeLessThan(up);
+    const ratio = down / up;
+    expect(ratio).toBeGreaterThan(0.85);
+    expect(ratio).toBeLessThan(0.93); // 1 / sqrt(1.25) ≈ 0.894
+  });
+
+  it('점프 최고 높이는 내려오는 속도와 무관하다', () => {
+    const h = apex(sim(), (t: number) => (t === 0 ? JUMP : NONE));
+    expect(h).toBeGreaterThanOrEqual(165);
+    expect(h).toBeLessThanOrEqual(185);
+  });
+});

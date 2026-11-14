@@ -55,10 +55,11 @@ const prop = (props: TiledProperty[] | undefined, name: string) => props?.find((
 /** 2단 점프(정점에서 2단)로 날 수 있는 최대 수평 거리 */
 export function maxJumpDistance(speed: number): number {
   const g = cfg.gravity;
+  const gFall = g * cfg.fallGravityScale;
   const v1 = -cfg.jumpVelocity;
   const v2 = -cfg.doubleJumpVelocity;
   const h = (v1 * v1) / (2 * g) + (v2 * v2) / (2 * g);
-  const airtime = v1 / g + v2 / g + Math.sqrt((2 * h) / g);
+  const airtime = v1 / g + v2 / g + Math.sqrt((2 * h) / gFall);
   return speed * airtime;
 }
 

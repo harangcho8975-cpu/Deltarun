@@ -172,6 +172,7 @@ test('휴대폰: 첫 터치로 전체화면, 뒤로가기 한 번이면 페이�
 });
 
 test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3번째에 대능력(박스)이 나간다', async ({ page }) => {
+  test.setTimeout(180_000); // 실시간으로 수십 초 달리는 테스트
   const errors = collectErrors(page);
   const info = () =>
     page.evaluate(() => {
@@ -197,13 +198,51 @@ test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3
   expect(early.skill!.ultimateTicks).toBe(0);
   expect(early.box).toBe(false);
 
-  // 900틱 = 3번째 발동(720)이 대능력이라 지금 박스가 나와 있다
-  await page.goto('/?char=chaosking&stage=stage_01&freezeAt=900');
-  await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 40_000 }).toBe(true);
+  // 780틱 = 3번째 발동(720)이 대능력이라 지금 박스가 나와 있다
+  await page.goto('/?char=chaosking&stage=stage_01&freezeAt=780');
+  await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 60_000 }).toBe(true);
   const mid = await info();
   expect(mid.skill!.count).toBe(3);
   expect(mid.skill!.ultimateTicks).toBeGreaterThan(0);
   expect(mid.box).toBe(true);
   await page.screenshot({ path: 'test-results/chaos-king-ultimate.png' });
+  expect(errors).toEqual([]);
+});
+
+test('카오스 킹 대능력이 끝나면 상자에서 코인이 튀어나와 바닥에서 튕긴다', async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = collectErrors(page);
+  type Fx = { active: boolean; settled: boolean; bounces: number; wy: number };
+  const fx = () =>
+    page.evaluate(() => {
+      const g = window.__deltaRun!.game.scene.getScene('Game') as unknown as {
+        sim: { coins: number; skill: { ultimateTicks: number } };
+        world: { coinFx: Fx[]; chaosBox: { displayWidth: number; displayHeight: number } };
+      };
+      const list = g.world.coinFx.filter((p) => p.active);
+      return { coins: g.sim.coins, ultimate: g.sim.skill.ultimateTicks, active: list.length, bounced: list.filter((p) => p.bounces > 0).length, floor: list.filter((p) => p.settled).map((p) => p.wy) };
+    });
+
+  // 1080틱에 대능력이 끝난다. 그 직후(1090)에 멈춰 두고 연출이 도는지 본다.
+  await page.goto('/?char=chaosking&stage=stage_01&freezeAt=1090');
+  await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 50_000 }).toBe(true);
+  const start = await fx();
+  expect(start.ultimate).toBe(0);
+  expect(start.coins).toBeGreaterThan(0); // 쌓인 코인이 지급됨
+  expect(start.active).toBeGreaterThanOrEqual(8); // 코인이 튀어나오는 연출 시작
+  await page.screenshot({ path: 'test-results/chaos-coin-shower.png' });
+
+  // 잠시 뒤 코인들이 바닥에 떨어져 튕겼고, 멈춘 코인은 바닥 높이(582)에 있다
+  await expect.poll(async () => (await fx()).bounced, { timeout: 5000 }).toBeGreaterThan(0);
+  await expect.poll(async () => (await fx()).floor.length, { timeout: 5000 }).toBeGreaterThan(0);
+  const later = await fx();
+  expect(later.floor.every((y) => Math.abs(y - 582) < 1)).toBe(true);
+
+  // 가로로 긴 상자
+  const size = await page.evaluate(() => {
+    const g = window.__deltaRun!.game.scene.getScene('Game') as unknown as { world: { chaosBox: { displayWidth: number; displayHeight: number } } };
+    return { w: g.world.chaosBox.displayWidth, h: g.world.chaosBox.displayHeight };
+  });
+  expect(size.w).toBeGreaterThan(size.h * 1.5);
   expect(errors).toEqual([]);
 });
