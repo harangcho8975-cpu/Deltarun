@@ -115,3 +115,31 @@ test('로비: 선택한 캐릭터가 가운데, 플레이를 누르면 세로 �
   await page.screenshot({ path: 'test-results/lobby-stages.png' });
   expect(errors).toEqual([]);
 });
+
+test('로비 캐릭터를 누르면 격자 목록 → 카드를 누르면 정보 화면 → 선택하면 로비 캐릭터가 바뀐다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+
+  await page.mouse.click(640, 400); // 가운데 캐릭터
+  await expect.poll(() => activeScenes(page)).toContain('Characters');
+  const cards = await page.evaluate(() => {
+    const s = window.__deltaRun!.game.scene.getScene('Characters') as unknown as { grid: { list: { x: number; y: number; getData(k: string): string }[] } };
+    return s.grid.list.map((c) => ({ x: c.x, y: c.y, id: c.getData('id') }));
+  });
+  expect(cards.map((c) => c.id)).toEqual(['orange', 'blueberry', 'mint']);
+  expect(new Set(cards.map((c) => c.y)).size).toBe(1); // 한 줄에 왼쪽부터
+  expect(cards[0].x).toBeLessThan(cards[1].x);
+
+  await page.mouse.click(cards[1].x, cards[1].y); // 블루베리
+  await expect.poll(() => activeScenes(page)).toContain('CharacterInfo');
+  expect(await page.evaluate(() => (window.__deltaRun!.game.scene.getScene('CharacterInfo') as unknown as { id: string }).id)).toBe('blueberry');
+  await page.screenshot({ path: 'test-results/character-info.png' });
+
+  await page.mouse.click(1090, 656); // 선택하기
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  expect(
+    await page.evaluate(() => (window.__deltaRun!.game.scene.getScene('Lobby') as unknown as { hero: { texture: { key: string } } }).hero.texture.key),
+  ).toBe('char_blueberry');
+  expect(errors).toEqual([]);
+});

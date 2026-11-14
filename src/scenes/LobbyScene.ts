@@ -25,6 +25,7 @@ export class LobbyScene extends Phaser.Scene {
   private heroName!: Phaser.GameObjects.Text;
   private heroTagline!: Phaser.GameObjects.Text;
   private heroShadow!: Phaser.GameObjects.Ellipse;
+  private heroHint!: Phaser.GameObjects.Text;
   private homeUI!: Phaser.GameObjects.Container;
   private stageUI!: Phaser.GameObjects.Container;
   private strip!: Phaser.GameObjects.Container;
@@ -67,6 +68,11 @@ export class LobbyScene extends Phaser.Scene {
 
     this.heroName = text(this, W / 2, 70, '', 48, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 8).setDepth(3);
     this.heroTagline = text(this, W / 2, 122, '', 22, '#ffffff').setOrigin(0.5).setStroke('#1a1a2e', 5).setDepth(3);
+    this.heroHint = text(this, W / 2, 158, '캐릭터를 누르면 목록이 열려요', 17, '#ffffff').setOrigin(0.5).setStroke('#1a1a2e', 4).setDepth(3).setAlpha(0.85);
+
+    // 가운데 캐릭터를 누르면 캐릭터 목록(격자)
+    this.hero.setInteractive({ useHandCursor: true });
+    this.hero.on('pointerup', () => this.openCharacters());
     this.refreshHero(false);
   }
 
@@ -85,7 +91,12 @@ export class LobbyScene extends Phaser.Scene {
 
   /** 스테이지 카드가 열려 있는 동안은 캐릭터를 숨긴다 */
   private showHero(on: boolean): void {
-    for (const o of [this.hero, this.heroShadow, this.heroName, this.heroTagline]) o.setVisible(on);
+    for (const o of [this.hero, this.heroShadow, this.heroName, this.heroTagline, this.heroHint]) o.setVisible(on);
+  }
+
+  private openCharacters(): void {
+    if (this.stageOpen) return;
+    this.scene.start('Characters');
   }
 
   private cycleCharacter(dir: 1 | -1): void {
@@ -233,6 +244,7 @@ export class LobbyScene extends Phaser.Scene {
       if (ev.code === 'KeyF') void fullscreen.toggle();
       if (!this.stageOpen) {
         if (ev.code === 'Enter' || ev.code === 'Space') this.openStages();
+        if (ev.code === 'KeyC') this.openCharacters();
         if (ev.code === 'ArrowLeft' || ev.code === 'KeyA') this.cycleCharacter(-1);
         if (ev.code === 'ArrowRight' || ev.code === 'KeyD') this.cycleCharacter(1);
         return;
