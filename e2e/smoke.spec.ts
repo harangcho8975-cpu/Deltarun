@@ -74,7 +74,7 @@ test('네 가지 화면 크기에서 같은 장면', async ({ browser }) => {
   for (let i = 1; i < shots.length; i++) expect(diff(shots[0], shots[i]), VIEWPORTS[i].name).toBeLessThan(2);
 });
 
-test('로비: 선택한 캐릭터가 가운데, 플레이를 누르면 세로 카드가 가로로 늘어선다', async ({ page }) => {
+test('로비: 캐릭터가 가운데, 플레이를 누르면 세로 카드가 가로로 늘어선다', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
@@ -96,11 +96,9 @@ test('로비: 선택한 캐릭터가 가운데, 플레이를 누르면 세로 �
   expect(st.home).toBe(true);
   expect(st.stages).toBe(false);
 
-  // 오른쪽 화살표로 캐릭터를 바꾸면 가운데 캐릭터가 바뀌고 새로고침해도 유지된다
-  await page.keyboard.press('ArrowRight');
-  await expect.poll(async () => (await lobby()).heroKey).toBe('char_blueberry');
-  await page.reload();
-  await expect.poll(async () => (await lobby()).heroKey).toBe('char_blueberry');
+  // 로비에서는 캐릭터를 바꾸지 않는다 (변경은 캐릭터 목록·정보 화면에서)
+  await page.waitForTimeout(200);
+  expect((await lobby()).heroKey).toBe('char_orange');
 
   // [플레이](오른쪽 아래)를 누르면 카드가 나타난다
   await page.mouse.click(1090, 640);

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Sound } from '../audio/Sound';
-import { characterById, characters } from '../data/characters';
+import { characterById } from '../data/characters';
 import { stageOrder, stages } from '../data/stages';
 import { saveStore } from '../save/store';
 import { fullscreen } from '../ui/fullscreen';
@@ -99,14 +99,6 @@ export class LobbyScene extends Phaser.Scene {
     this.scene.start('Characters');
   }
 
-  private cycleCharacter(dir: 1 | -1): void {
-    if (characters.length < 2 || this.stageOpen) return;
-    const i = characters.findIndex((c) => c.id === saveStore.data.selectedCharacter);
-    const next = characters[(i + dir + characters.length) % characters.length];
-    saveStore.setCharacter(next.id);
-    this.refreshHero(true);
-  }
-
   // ───────── 홈 화면 UI ─────────
 
   private buildHomeUI(): Phaser.GameObjects.Container {
@@ -130,11 +122,6 @@ export class LobbyScene extends Phaser.Scene {
       items.push(button(this, 1150, 104, 140, 48, '전체화면 (F)', () => void fullscreen.toggle(), 0xdfe6f5, 17));
     }
 
-    // 캐릭터 바꾸기
-    if (characters.length > 1) {
-      items.push(button(this, 360, 380, 84, 84, '◀', () => this.cycleCharacter(-1), 0xffffff, 36));
-      items.push(button(this, 920, 380, 84, 84, '▶', () => this.cycleCharacter(1), 0xffffff, 36));
-    }
 
     // 오른쪽 아래 [플레이]
     items.push(button(this, 1090, 640, 320, 100, '플레이  ▶', () => this.openStages(), COLORS.accent, 42));
@@ -245,8 +232,6 @@ export class LobbyScene extends Phaser.Scene {
       if (!this.stageOpen) {
         if (ev.code === 'Enter' || ev.code === 'Space') this.openStages();
         if (ev.code === 'KeyC') this.openCharacters();
-        if (ev.code === 'ArrowLeft' || ev.code === 'KeyA') this.cycleCharacter(-1);
-        if (ev.code === 'ArrowRight' || ev.code === 'KeyD') this.cycleCharacter(1);
         return;
       }
       if (ev.code === 'Escape' || ev.code === 'Backspace') this.closeStages();

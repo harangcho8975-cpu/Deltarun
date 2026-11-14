@@ -45,7 +45,6 @@ export class GameScene extends Phaser.Scene {
   private finished = false;
   private frozen = false;
   private debug: DebugOverlay | null = null;
-  private portraitMq = matchMedia('(orientation: portrait) and (pointer: coarse)');
 
   constructor() {
     super('Game');
@@ -85,16 +84,12 @@ export class GameScene extends Phaser.Scene {
       if (ev.code === 'KeyF') void fullscreen.toggle();
     });
     const onVisibility = () => document.hidden && this.setPaused(true);
-    const onOrientation = () => this.portraitMq.matches && this.setPaused(true);
     document.addEventListener('visibilitychange', onVisibility);
-    this.portraitMq.addEventListener('change', onOrientation);
     this.events.once('shutdown', () => {
       document.removeEventListener('visibilitychange', onVisibility);
-      this.portraitMq.removeEventListener('change', onOrientation);
       this.debug?.destroy();
       this.debug = null;
     });
-    if (this.portraitMq.matches) this.setPaused(true);
   }
 
   setPaused(on: boolean): void {
