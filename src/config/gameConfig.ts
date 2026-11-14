@@ -15,8 +15,8 @@ export const gameConfig = {
   playerScreenX: 240,
 
   gravity: 2600, // px/s²
-  jumpVelocity: -880, // px/s
-  doubleJumpVelocity: -820,
+  jumpVelocity: -960, // px/s
+  doubleJumpVelocity: -900,
   maxFallSpeed: 1600,
   coyoteTicks: 6,
   jumpBufferTicks: 6,

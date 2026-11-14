@@ -13,10 +13,10 @@ const apex = (s: ReturnType<typeof sim>, input: Parameters<typeof run>[2]) => {
 };
 
 describe('플레이어 물리', () => {
-  it('1단 점프 최고 높이는 145–155px', () => {
+  it('1단 점프 최고 높이는 165–185px', () => {
     const h = apex(sim(), (t: number) => (t === 0 ? JUMP : NONE));
-    expect(h).toBeGreaterThanOrEqual(145);
-    expect(h).toBeLessThanOrEqual(155);
+    expect(h).toBeGreaterThanOrEqual(165);
+    expect(h).toBeLessThanOrEqual(185);
   });
 
   it('2단 점프는 높은 장애물(160) + 몸 높이(100)보다 높이 올라간다', () => {

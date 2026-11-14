@@ -159,6 +159,10 @@ test('휴대폰: 첫 터치로 전체화면, 뒤로가기 한 번이면 페이�
   await expect.poll(isFs).toBe(false);
   expect(new URL(page.url()).pathname).toBe('/');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
+
+  // 풀린 뒤 다시 터치하면 전체화면이 다시 된다
+  await page.tap('#game canvas', { position: { x: 20, y: 20 } });
+  await expect.poll(isFs).toBe(true);
   expect(errors).toEqual([]);
   await ctx.close();
 });

@@ -61,10 +61,10 @@ export class LobbyScene extends Phaser.Scene {
   private buildHero(): void {
     const id = saveStore.data.selectedCharacter;
     this.hero = this.add.image(W / 2, 596, `char_${id}`).setOrigin(0.5, 1).setDepth(2);
-    this.hero.setDisplaySize(330, 440);
+    this.hero.setDisplaySize(250, 333);
     // 서 있는 동안 살짝 숨 쉬듯 위아래로 움직인다
     this.tweens.add({ targets: this.hero, scaleY: this.hero.scaleY * 1.025, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.heroShadow = this.add.ellipse(W / 2, 598, 260, 30, 0x000000, 0.22).setDepth(1);
+    this.heroShadow = this.add.ellipse(W / 2, 598, 200, 24, 0x000000, 0.22).setDepth(1);
 
     this.heroName = text(this, W / 2, 70, '', 48, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 8).setDepth(3);
     this.heroTagline = text(this, W / 2, 122, '', 22, '#ffffff').setOrigin(0.5).setStroke('#1a1a2e', 5).setDepth(3);
@@ -78,7 +78,7 @@ export class LobbyScene extends Phaser.Scene {
 
   private refreshHero(pop: boolean): void {
     const c = characterById(saveStore.data.selectedCharacter);
-    this.hero.setTexture(`char_${c.id}`).setDisplaySize(330, 440);
+    this.hero.setTexture(`char_${c.id}`).setDisplaySize(250, 333);
     this.heroName.setText(c.name);
     this.heroTagline.setText(c.tagline);
     if (pop) {
