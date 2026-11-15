@@ -58,6 +58,7 @@ function spawnDrops(s: SimState, coins: number, box: Box): void {
       delay: Math.floor(rand() * d.delayMaxTicks),
       bounces: 0,
       settled: false,
+      age: 0,
     });
   }
 }
@@ -89,7 +90,26 @@ export function updateDrops(s: SimState, events: SimEvent[]): void {
       keep.push(c);
       continue;
     }
-    if (!c.settled) {
+    c.age++;
+    if (c.age > d.magnetAfterTicks) {
+      // 잠깐 튕기다가 자력이 붙어 플레이어에게 빨려 든다 (결정적 이동: 정규화 + 고정 속도)
+      const tx = pb.x + pb.w / 2;
+      const ty = pb.y - pb.h / 2;
+      const dx = tx - c.x;
+      const dy = ty - c.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const sp = d.magnetSpeed * dt;
+      if (dist <= sp) {
+        c.x = tx;
+        c.y = ty;
+      } else {
+        c.x += (dx / dist) * sp;
+        c.y += (dy / dist) * sp;
+      }
+      c.vx = 0;
+      c.vy = 0;
+      c.settled = true;
+    } else if (!c.settled) {
       c.vy += d.gravity * dt;
       c.x += c.vx * dt;
       c.y += c.vy * dt;

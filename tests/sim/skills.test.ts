@@ -167,7 +167,7 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
     for (let i = 0; i < 20; i++) {
       s.drops.push({
         id: i, x: s.cameraX + 1300 + i * 10, y: 300 + (i % 5) * 20, vx: (i - 10) * 25, vy: -500 - i * 25,
-        delay: 0, bounces: 0, settled: false,
+        delay: 0, bounces: 0, age: -1e6, settled: false, // age를 음수로 두면 자력이 붙지 않아 낙하 물리만 본다
       });
     }
     return s;
@@ -205,6 +205,22 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
     for (let i = 1; i < heights.length; i++) expect(heights[i]).toBeLessThan(heights[i - 1]);
   });
 
+  it('튀어나온 코인은 잠깐 튕기다가 자력이 붙어 플레이어에게 끌려와 지급된다', () => {
+    const s = skillSim({ length: 40000, ground: [[0, 40000]], goalX: 39000 });
+    const d = cfg.skills.chaosKing.drop;
+    // 플레이어(화면 왼쪽)에서 멀리 떨어진 곳에 코인 하나
+    s.drops.push({ id: 1, x: s.player.x + 900, y: 300, vx: 0, vy: -500, delay: 0, bounces: 0, age: 0, settled: false });
+    for (let i = 0; i < d.magnetAfterTicks; i++) updateDrops(s, []);
+    const c = s.drops[0];
+    expect(c.x).toBeGreaterThan(s.player.x + 800); // 자력 전에는 제자리 근처에서 튕긴다
+    const x0 = c.x;
+    for (let i = 0; i < 6; i++) updateDrops(s, []);
+    expect(s.drops[0].x).toBeLessThan(x0 - 100); // 자력이 붙어 플레이어 쪽으로 빠르게 이동
+    for (let i = 0; i < 90 && s.drops.length; i++) updateDrops(s, []);
+    expect(s.drops).toHaveLength(0);
+    expect(s.coins).toBe(1); // 끌려와 닿으면 지급
+  });
+
   it('달리다가 코인에 닿으면 하나당 코인 +1, 모두 주우면 30', () => {
     const { s } = toEnd();
     const ev = runTagged(s, 400);
@@ -217,7 +233,7 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
   it('줍지 못하고 화면 뒤로 지나간 코인은 사라진다', () => {
     const s = skillSim({ length: 40000, ground: [[0, 40000]], goalX: 39000 });
     // 플레이어가 점프로 코인을 피한다고 가정: 코인을 플레이어 뒤쪽 먼 곳에 둔다
-    s.drops.push({ id: 1, x: s.cameraX - 500, y: DROP_FLOOR_Y, vx: 0, vy: 0, delay: 0, bounces: 2, settled: true });
+    s.drops.push({ id: 1, x: s.cameraX - 500, y: DROP_FLOOR_Y, vx: 0, vy: 0, delay: 0, bounces: 2, age: 0, settled: true });
     updateDrops(s, []);
     expect(s.drops).toHaveLength(0);
     expect(s.coins).toBe(0);
@@ -226,7 +242,7 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
   it('구멍 위에서도 빠지지 않고 바닥에서 튕기다 멈춘다 (예외 없음)', () => {
     const s = skillSim({ length: 40000, ground: [[0, 1000], [9000, 40000]], goalX: 39000 }); // 1000~9000 구멍
     for (let i = 0; i < 12; i++) {
-      s.drops.push({ id: i, x: s.cameraX + 1500 + i * 30, y: 300, vx: (i - 6) * 30, vy: -600, delay: 0, bounces: 0, settled: false });
+      s.drops.push({ id: i, x: s.cameraX + 1500 + i * 30, y: 300, vx: (i - 6) * 30, vy: -600, delay: 0, bounces: 0, age: -1e6, settled: false });
     }
     for (let i = 0; i < 300; i++) updateDrops(s, []);
     expect(s.drops).toHaveLength(12); // 하나도 사라지지 않았다

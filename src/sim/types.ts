@@ -68,6 +68,8 @@ export interface DropCoin {
   delay: number;
   bounces: number;
   settled: boolean;
+  /** 날아다니기 시작한 뒤 지난 틱. 일정 시간이 지나면 자력으로 플레이어에게 끌려간다 */
+  age: number;
 }
 
 export interface SimState {

@@ -239,9 +239,9 @@ test('카오스 킹 대능력이 끝나면 쌓인 코인이 모두 떨어져 바
   await expect.poll(async () => (await st()).sprites, { timeout: 5000 }).toBeGreaterThan(0); // 화면에 코인이 보인다
   await page.screenshot({ path: 'test-results/chaos-coin-shower.png' });
 
-  // 바닥에서 튕기다 멈추고(바닥 높이 586)
-  await expect.poll(async () => (await st()).drops.some((d) => d.s && d.b >= 1 && Math.abs(d.y - 586) < 1), { timeout: 15_000, intervals: [100] }).toBe(true);
-  // 달리다가 닿으면 코인이 지급된다
+  // 바닥에서 한 번 이상 튕기고(바닥 높이 586), 잠깐 뒤 자력이 붙어 플레이어 쪽으로 끌려온다
+  await expect.poll(async () => (await st()).drops.some((d) => d.b >= 1), { timeout: 15_000, intervals: [50] }).toBe(true);
+  // 끌려와 닿으면 코인이 지급된다
   await expect.poll(async () => (await st()).coins, { timeout: 30_000, intervals: [100] }).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });

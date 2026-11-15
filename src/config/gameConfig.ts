@@ -69,6 +69,8 @@ export const gameConfig = {
         vxRange: 300, // 튀어나올 때 가로 속도 ±
         vyMin: -1000, // 튀어나올 때 위로 가는 속도 범위
         vyMax: -500,
+        magnetAfterTicks: 54, // 튀어나온 뒤 0.9초 동안 튕기다가
+        magnetSpeed: 1500, // 이후 이 속도(px/s)로 플레이어에게 끌려간다
         delayMaxTicks: 24, // 한꺼번에가 아니라 0~0.4초 사이에 하나씩 튀어나옴
       },
       box: {
@@ -93,7 +95,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 9;
+export const SIM_VERSION = 10;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {
