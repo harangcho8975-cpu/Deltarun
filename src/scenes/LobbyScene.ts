@@ -4,6 +4,7 @@ import { characterById } from '../data/characters';
 import { stageOrder, stages } from '../data/stages';
 import { saveStore } from '../save/store';
 import { ECONOMY } from '../config/economy';
+import { todayKey } from './EventScene';
 import { fullscreen } from '../ui/fullscreen';
 import { button, COLORS, text } from '../ui/style';
 
@@ -127,6 +128,10 @@ export class LobbyScene extends Phaser.Scene {
     // 왼쪽 아래: 장비·뽑기
     const equipped = saveStore.data.equipment.equipped.length;
     items.push(button(this, 130, 640, 200, 80, `장비  ${equipped}/${ECONOMY.equipSlots}`, () => this.scene.start('Equipment'), 0xdfe6f5, 26));
+    items.push(button(this, 570, 640, 200, 80, '이벤트', () => this.scene.start('Event'), 0xdfe6f5, 26));
+    if (saveStore.canClaimAttendance(todayKey())) {
+      items.push(this.add.circle(660, 604, 12, 0xe74c3c).setStrokeStyle(3, 0xffffff)); // 받을 보상이 있다는 표시
+    }
     items.push(button(this, 350, 640, 200, 80, '뽑기', () => this.scene.start('Gacha'), 0xdfe6f5, 26));
 
     // 오른쪽 아래 [플레이]
@@ -240,6 +245,7 @@ export class LobbyScene extends Phaser.Scene {
         if (ev.code === 'KeyC') this.openCharacters();
         if (ev.code === 'KeyE') this.scene.start('Equipment');
         if (ev.code === 'KeyG') this.scene.start('Gacha');
+        if (ev.code === 'KeyV') this.scene.start('Event');
         return;
       }
       if (ev.code === 'Escape' || ev.code === 'Backspace') this.closeStages();

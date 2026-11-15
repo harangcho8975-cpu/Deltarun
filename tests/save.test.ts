@@ -46,6 +46,7 @@ describe('저장', () => {
     const mem = memory();
     const s = new SaveStore(mem);
     expect(s.data.selectedCharacter).toBe('orange');
+    s.addCharacter('mint');
     s.setCharacter('mint');
     expect(new SaveStore(mem).data.selectedCharacter).toBe('mint');
     s.setCharacter('없는캐릭터');

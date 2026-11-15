@@ -116,6 +116,8 @@ test('로비: 캐릭터가 가운데, 플레이를 누르면 세로 카드가 �
 
 test('로비 캐릭터를 누르면 격자 목록 → 카드를 누르면 정보 화면 → 선택하면 로비 캐릭터가 바뀐다', async ({ page }) => {
   const errors = collectErrors(page);
+  // 블루베리를 이미 뽑은 상태로 시작
+  await page.addInitScript(() => localStorage.setItem('deltarun.save', JSON.stringify({ version: 1, ownedCharacters: ['orange', 'frisk', 'blueberry'] })));
   await page.goto('/');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
 
@@ -315,5 +317,30 @@ test('뽑기: 코인으로 뽑으면 장비를 얻고, 장비 화면에서 최�
   const equipped = await sceneEval<string[]>(page, `JSON.parse(localStorage.getItem('deltarun.save')).equipment.equipped`);
   expect(equipped).toHaveLength(3);
   await page.screenshot({ path: 'test-results/equipment.png' });
+  expect(errors).toEqual([]);
+});
+
+test('이벤트 탭: 출석 보상은 하루 한 번, 캐릭터 뽑기로 캐릭터를 얻는다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/?debug=1&coins=1000');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  await page.keyboard.press('KeyV');
+  await expect.poll(() => activeScenes(page)).toContain('Event');
+  await page.mouse.click(320, 430); // 받기
+  await page.waitForTimeout(300);
+  const coins = () => page.evaluate(() => JSON.parse(localStorage.getItem('deltarun.save')!).coins as number);
+  const after = await coins();
+  await page.mouse.click(320, 430); // 두 번째는 받아지지 않는다
+  await page.waitForTimeout(300);
+  expect(await coins()).toBe(after);
+  await page.screenshot({ path: 'test-results/event.png' });
+
+  await page.mouse.click(960, 430); // 픽업 뽑기
+  await expect.poll(() => activeScenes(page)).toContain('Gacha');
+  await page.keyboard.press('Digit0');
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: 'test-results/char-gacha.png' });
+  const owned = await page.evaluate(() => JSON.parse(localStorage.getItem('deltarun.save')!).ownedCharacters.length as number);
+  expect(owned).toBeGreaterThan(2);
   expect(errors).toEqual([]);
 });

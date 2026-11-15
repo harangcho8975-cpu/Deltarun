@@ -9,11 +9,11 @@ export type Rng = () => number;
 
 const ORDER: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
 
-export function rollRarity(rng: Rng): Rarity {
+export function rollRarity(rng: Rng, rates: Record<Rarity, number> = ECONOMY.rates): Rarity {
   const x = rng();
   let acc = 0;
   for (const r of ORDER) {
-    acc += ECONOMY.rates[r];
+    acc += rates[r];
     if (x < acc) return r;
   }
   return 'common';

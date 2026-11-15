@@ -21,6 +21,10 @@ export interface SaveData {
   coins: number;
   selectedCharacter: string;
   equipment: EquipmentSave;
+  /** 가진 캐릭터 */
+  ownedCharacters: string[];
+  /** 마지막으로 출석 보상을 받은 날짜 (YYYY-MM-DD) */
+  lastAttendance: string;
   settings: { bgm: boolean; sfx: boolean };
 }
 
@@ -38,6 +42,8 @@ export function defaultSave(): SaveData {
     coins: ECONOMY.startCoins,
     selectedCharacter: DEFAULT_CHARACTER,
     equipment: { owned: {}, equipped: [] },
+    ownedCharacters: [...ECONOMY.startCharacters],
+    lastAttendance: '',
     settings: { bgm: true, sfx: true },
   };
 }
@@ -50,6 +56,14 @@ function sanitize(raw: unknown): SaveData {
   if (typeof r.selectedCharacter === 'string' && characters.some((c) => c.id === r.selectedCharacter)) {
     d.selectedCharacter = r.selectedCharacter; // 목록에 없는 값(지워진 캐릭터 등)은 기본값
   }
+  if (Array.isArray(r.ownedCharacters)) {
+    for (const id of r.ownedCharacters) {
+      if (characters.some((c) => c.id === id) && !d.ownedCharacters.includes(id)) d.ownedCharacters.push(id);
+    }
+  }
+  // 예전 저장(전부 열려 있던 때)에서 고른 캐릭터는 계속 쓸 수 있게 한다
+  if (!d.ownedCharacters.includes(d.selectedCharacter)) d.ownedCharacters.push(d.selectedCharacter);
+  if (typeof r.lastAttendance === 'string') d.lastAttendance = r.lastAttendance;
   if (r.equipment && typeof r.equipment === 'object') {
     const eq = r.equipment as Partial<EquipmentSave>;
     for (const [id, n] of Object.entries(eq.owned ?? {})) {
@@ -188,8 +202,34 @@ export class SaveStore {
     return 'equipped';
   }
 
+  ownsCharacter(id: string): boolean {
+    return this.data.ownedCharacters.includes(id);
+  }
+
+  /** 캐릭터를 얻는다. 처음 얻으면 isNew */
+  addCharacter(id: string): { isNew: boolean } {
+    if (!characters.some((c) => c.id === id)) throw new Error(`알 수 없는 캐릭터: ${id}`);
+    if (this.ownsCharacter(id)) return { isNew: false };
+    this.data.ownedCharacters.push(id);
+    return { isNew: true };
+  }
+
+  /** 오늘 출석 보상을 받을 수 있는가 */
+  canClaimAttendance(today: string): boolean {
+    return this.data.lastAttendance !== today;
+  }
+
+  /** 출석 보상. 받은 코인을 돌려주고, 오늘 이미 받았으면 0 */
+  claimAttendance(today: string): number {
+    if (!this.canClaimAttendance(today)) return 0;
+    this.data.lastAttendance = today;
+    this.data.coins += ECONOMY.attendanceCoins;
+    this.save();
+    return ECONOMY.attendanceCoins;
+  }
+
   setCharacter(id: string): void {
-    if (!characters.some((c) => c.id === id)) return;
+    if (!characters.some((c) => c.id === id) || !this.ownsCharacter(id)) return;
     this.data.selectedCharacter = id;
     this.save();
   }

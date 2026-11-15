@@ -54,8 +54,9 @@ export class CharacterListScene extends Phaser.Scene {
     // 머리줄: 스크롤되는 카드 위를 덮는다
     this.add.rectangle(0, 0, W, HEADER_H, COLORS.panel, 1).setOrigin(0).setDepth(5);
     text(this, W / 2, 52, '캐릭터', 40, '#ffffff', true).setOrigin(0.5).setDepth(6);
-    text(this, W / 2, 88, `${characters.length}명 · 카드를 누르면 정보를 볼 수 있어요`, 18, COLORS.inkDim).setOrigin(0.5).setDepth(6);
+    text(this, W / 2, 88, `보유 ${saveStore.data.ownedCharacters.length} / ${characters.length}명 · 카드를 누르면 정보를 볼 수 있어요`, 18, COLORS.inkDim).setOrigin(0.5).setDepth(6);
     button(this, 120, 52, 180, 64, '← 로비', () => this.scene.start('Lobby'), 0xdfe6f5, 24).setDepth(6);
+    button(this, 1130, 52, 220, 64, '캐릭터 뽑기', () => this.scene.start('Gacha', { mode: 'character' }), COLORS.accent, 24).setDepth(6);
 
     this.setupScroll();
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
@@ -68,6 +69,7 @@ export class CharacterListScene extends Phaser.Scene {
   private card(x: number, y: number, c: CharacterInfo, i: number): Phaser.GameObjects.Container {
     const r = RARITY[c.rarity];
     const selected = c.id === saveStore.data.selectedCharacter;
+    const owned = saveStore.ownsCharacter(c.id);
     const g = this.add.graphics();
     g.fillStyle(0xffffff, 0.96).fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16);
     // 등급 색 배경 (그림 뒤)
@@ -75,6 +77,7 @@ export class CharacterListScene extends Phaser.Scene {
     g.lineStyle(selected ? 6 : 4, selected ? COLORS.accent : r.color, 1).strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16);
 
     const portrait = fitImage(this.add.image(0, -CARD_H / 2 + 194, `char_${c.id}`).setOrigin(0.5, 1), 150, 176);
+    if (!owned) portrait.setTint(0x222233).setAlpha(0.8); // 못 얻은 캐릭터는 실루엣
     const items: Phaser.GameObjects.GameObject[] = [
       g,
       portrait,
@@ -82,6 +85,7 @@ export class CharacterListScene extends Phaser.Scene {
       text(this, 0, CARD_H / 2 - 22, r.label, 17, r.css, true).setOrigin(0.5),
       text(this, -CARD_W / 2 + 16, -CARD_H / 2 + 14, `${i + 1}`, 16, '#4a5068', true),
     ];
+    if (!owned) items.push(text(this, 0, -CARD_H / 2 + 100, '미보유', 22, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 5));
     if (selected) {
       const tag = this.add.graphics();
       tag.fillStyle(COLORS.accent, 1).fillRoundedRect(CARD_W / 2 - 82, -CARD_H / 2 + 12, 70, 28, 14);

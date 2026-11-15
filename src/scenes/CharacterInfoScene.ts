@@ -51,8 +51,10 @@ export class CharacterInfoScene extends Phaser.Scene {
     this.buildPanel(c, r, selected);
 
     // 오른쪽 아래 [선택하기]
-    const pick = button(this, 1090, 674, 300, 80, selected ? '선택 중' : '선택하기', () => this.pick(), COLORS.accent, 34);
-    if (selected) pick.setEnabled(false);
+    const owned = saveStore.ownsCharacter(c.id);
+    const pick = button(this, 1090, 674, 300, 80, !owned ? '미보유' : selected ? '선택 중' : '선택하기', () => this.pick(), COLORS.accent, 34);
+    if (selected || !owned) pick.setEnabled(false);
+    if (!owned) button(this, 780, 674, 240, 80, '뽑으러 가기', () => this.scene.start('Gacha', { mode: 'character' }), 0xdfe6f5, 26);
 
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       if (ev.code === 'Escape' || ev.code === 'Backspace') this.scene.start('Characters');
@@ -118,7 +120,7 @@ export class CharacterInfoScene extends Phaser.Scene {
   }
 
   private pick(): void {
-    if (this.id === saveStore.data.selectedCharacter) return;
+    if (this.id === saveStore.data.selectedCharacter || !saveStore.ownsCharacter(this.id)) return;
     saveStore.setCharacter(this.id);
     this.scene.start('Lobby');
   }

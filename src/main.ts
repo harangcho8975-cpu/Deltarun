@@ -5,6 +5,7 @@ import { LobbyScene } from './scenes/LobbyScene';
 import { CharacterListScene } from './scenes/CharacterListScene';
 import { CharacterInfoScene } from './scenes/CharacterInfoScene';
 import { EquipmentScene } from './scenes/EquipmentScene';
+import { EventScene } from './scenes/EventScene';
 import { GachaScene } from './scenes/GachaScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
@@ -25,7 +26,7 @@ const game = new Phaser.Game({
   },
   input: { activePointers: 3 },
   render: { preserveDrawingBuffer: true },
-  scene: [BootScene, PreloadScene, LobbyScene, CharacterListScene, CharacterInfoScene, EquipmentScene, GachaScene, GameScene, UIScene, ResultScene],
+  scene: [BootScene, PreloadScene, LobbyScene, CharacterListScene, CharacterInfoScene, EquipmentScene, GachaScene, EventScene, GameScene, UIScene, ResultScene],
 });
 
 declare global {

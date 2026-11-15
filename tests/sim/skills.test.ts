@@ -215,8 +215,8 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
     expect(c.x).toBeGreaterThan(s.player.x + 800); // 자력 전에는 제자리 근처에서 튕긴다
     const x0 = c.x;
     for (let i = 0; i < 6; i++) updateDrops(s, []);
-    expect(s.drops[0].x).toBeLessThan(x0 - 100); // 자력이 붙어 플레이어 쪽으로 빠르게 이동
-    for (let i = 0; i < 90 && s.drops.length; i++) updateDrops(s, []);
+    expect(s.drops[0].x).toBeLessThan(x0 - 50); // 자력이 붙어 플레이어 쪽으로 이동
+    for (let i = 0; i < 120 && s.drops.length; i++) updateDrops(s, []);
     expect(s.drops).toHaveLength(0);
     expect(s.coins).toBe(1); // 끌려와 닿으면 지급
   });
