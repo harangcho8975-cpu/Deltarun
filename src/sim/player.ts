@@ -8,7 +8,7 @@ const isGrounded = (st: string) => st === 'run' || st === 'slide';
 export function updateJumpBuffer(s: SimState, input: InputFrame): void {
   const p = s.player;
   p.slideHeld = input.slideHeld;
-  if (input.jumpPressed) p.jumpBufferTicks = cfg.jumpBufferTicks;
+  if (input.jumpPressed) p.jumpBufferTicks = cfg.jumpBufferTicks + s.mods.bufferBonus;
   else if (p.jumpBufferTicks > 0) p.jumpBufferTicks--;
 }
 
@@ -63,7 +63,7 @@ export function updateGround(s: SimState, prevY: number, events: SimEvent[]): vo
       p.state = 'fall';
       p.vy = 0;
       p.jumpsUsed = 0;
-      p.coyoteTicks = cfg.coyoteTicks;
+      p.coyoteTicks = cfg.coyoteTicks + s.mods.coyoteBonus;
     }
   } else if (floor && p.vy >= 0 && p.y >= cfg.groundY && prevY <= cfg.groundY) {
     // 바닥선을 이번 틱에 위에서 아래로 지나왔을 때만 착지 (구멍 안에서는 다시 올라오지 못함)

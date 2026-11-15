@@ -35,7 +35,7 @@ export function step(s: SimState, input: InputFrame): SimEvent[] {
 
   // 4. 체력 감소
   if (!s.debugInvincible) {
-    p.hp -= cfg.hp.drainPerSec / TICK_RATE;
+    p.hp -= (cfg.hp.drainPerSec * s.mods.hpDrainMul) / TICK_RATE;
     if (p.hp <= 0) {
       p.hp = 0;
       fail(s, 'hp', events);
@@ -74,9 +74,9 @@ export function step(s: SimState, input: InputFrame): SimEvent[] {
         e.alive = false;
         const kind = e.kind as JellyType;
         let points = 0;
-        if (kind === 'coin') s.coins++;
+        if (kind === 'coin') s.coins += 1 + s.mods.coinBonus;
         else {
-          points = cfg.points[kind];
+          points = Math.floor(cfg.points[kind] * (1 + s.mods.jellyScorePct / 100));
           s.jellyScore += points;
           s.jelliesTaken++;
         }
@@ -92,9 +92,10 @@ export function step(s: SimState, input: InputFrame): SimEvent[] {
         } else if (p.invulnTicks > 0 || s.debugInvincible) {
           // 무시
         } else {
-          p.hp = Math.max(0, p.hp - cfg.hp.hitDamage);
-          p.invulnTicks = cfg.invulnTicksOnHit;
-          events.push({ type: 'hit', id: e.id, damage: cfg.hp.hitDamage });
+          const damage = Math.max(1, cfg.hp.hitDamage - s.mods.hitDamageReduce);
+          p.hp = Math.max(0, p.hp - damage);
+          p.invulnTicks = cfg.invulnTicksOnHit + s.mods.invulnOnHitBonus;
+          events.push({ type: 'hit', id: e.id, damage });
           if (p.hp <= 0) {
             fail(s, 'hp', events);
             s.tick++;

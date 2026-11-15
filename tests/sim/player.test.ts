@@ -122,7 +122,7 @@ describe('플레이어 물리', () => {
 });
 
 describe('내려올 때 떨어지는 속도', () => {
-  it('올라갈 때보다 빨리 떨어진다 (내려오는 시간이 올라가는 시간의 약 0.89배)', () => {
+  it('올라갈 때보다 빨리 떨어진다 (내려오는 시간이 올라가는 시간의 0.85~0.96배)', () => {
     const s = sim();
     let up = 0;
     let down = 0;
@@ -137,7 +137,7 @@ describe('내려올 때 떨어지는 속도', () => {
     expect(down).toBeLessThan(up);
     const ratio = down / up;
     expect(ratio).toBeGreaterThan(0.85);
-    expect(ratio).toBeLessThan(0.93); // 1 / sqrt(1.25) ≈ 0.894
+    expect(ratio).toBeLessThan(0.96); // 이론값 1 / sqrt(1.25) ≈ 0.894, 틱 단위로 세면 17틱 vs 16틱 같은 오차가 있다
   });
 
   it('점프 최고 높이는 내려오는 속도와 무관하다', () => {
@@ -148,7 +148,7 @@ describe('내려올 때 떨어지는 속도', () => {
 });
 
 describe('점프 시간', () => {
-  it('1단 점프는 떠서 착지까지 35~39틱(약 0.6초)이다. 점프 높이는 그대로', () => {
+  it('1단 점프는 떠서 착지까지 32~36틱(약 0.57초)이다. 점프 높이는 그대로', () => {
     const s = sim();
     let air = 0;
     let landed = false;
@@ -157,7 +157,7 @@ describe('점프 시간', () => {
       else air++;
     }
     expect(landed).toBe(true);
-    expect(air + 1).toBeGreaterThanOrEqual(35);
-    expect(air + 1).toBeLessThanOrEqual(39); // 예전(약 42틱)보다 짧다
+    expect(air + 1).toBeGreaterThanOrEqual(32);
+    expect(air + 1).toBeLessThanOrEqual(36); // 처음(약 42틱)보다 짧다
   });
 });

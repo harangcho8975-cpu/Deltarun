@@ -11,6 +11,7 @@ import { WorldRenderer, type RenderSnapshot } from '../render/WorldRenderer';
 import { createSim, ReplayRecorder, starsFor, step, totalScore, type SimEvent, type SimState } from '../sim';
 import { fullscreen } from '../ui/fullscreen';
 import { activeCharacter } from '../ui/activeCharacter';
+import { activeEquipment, activeMods } from '../ui/activeEquipment';
 import { text } from '../ui/style';
 
 export interface RunResultData {
@@ -70,9 +71,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     const ch = activeCharacter();
-    this.sim = createSim(stage, { startX: params.debug ? params.startX : undefined, skill: ch.skillId ?? null });
+    const equipped = activeEquipment();
+    const mods = activeMods();
+    this.sim = createSim(stage, { startX: params.debug ? params.startX : undefined, skill: ch.skillId ?? null, mods });
     this.prev = { cameraX: this.sim.cameraX, playerY: this.sim.player.y };
-    this.recorder = new ReplayRecorder(stage.id, ch.skillId);
+    this.recorder = new ReplayRecorder(stage.id, ch.skillId, equipped.length ? mods : undefined);
     if (params.god) this.sim.debugInvincible = true;
     this.controls = new InputController(this);
     this.world = new WorldRenderer(this, stage, params.debug);

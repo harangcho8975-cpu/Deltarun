@@ -1,5 +1,6 @@
 // 이 폴더(src/sim)는 Phaser를 import하지 않는다. 랜덤·시간 함수도 쓰지 않는다.
 import type { ItemType, JellyType, ObstacleType, StageData } from '../data/schema';
+import type { Modifiers } from './modifiers';
 
 export type PlayerState = 'run' | 'jump' | 'doubleJump' | 'fall' | 'slide' | 'dead';
 export type Outcome = 'playing' | 'cleared' | 'failed';
@@ -91,6 +92,10 @@ export interface SimState {
   giantGround: [number, number][];
   stage: StageData;
   skill: SkillState | null;
+  /** 장착한 장비들의 효과를 합친 값 (판 도중 바뀌지 않는다) */
+  mods: Modifiers;
+  /** 이번 판의 최대 체력 (기본 + 장비) */
+  maxHp: number;
   /** 대능력이 끝난 뒤 바닥에 떨어져 있는 코인들 */
   drops: DropCoin[];
   nextDropId: number;

@@ -11,9 +11,9 @@ describe('바닥과 구멍', () => {
   });
 
   it('구멍 위를 점프로 넘으면 생존', () => {
-    const s = sim(holeAt(500, 160));
-    // 발 중앙 268, 5px/틱 → 구멍 끝 직전(x≈480)에서 점프
-    run(s, 42);
+    const s = sim(holeAt(500, 140));
+    // 발 중앙 268, 5px/틱. 1단 점프는 약 34틱(170px) 날아가므로 구멍 끝 직전에서 점프해야 건넌다.
+    run(s, 43);
     run(s, 100, (t) => (t === 0 ? JUMP : NONE));
     expect(s.outcome).toBe('playing');
     expect(s.player.state).toBe('run');

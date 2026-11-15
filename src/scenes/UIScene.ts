@@ -116,7 +116,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onHud(s: SimState, controls: InputController): void {
-    const hp = Math.max(0, s.player.hp) / cfg.hp.max;
+    const hp = Math.max(0, s.player.hp) / s.maxHp;
     this.hpFill
       .clear()
       .fillStyle(hp < 0.3 ? COLORS.bad : COLORS.good, 1)

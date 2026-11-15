@@ -1,5 +1,7 @@
 // localStorage 래퍼. 어떤 오류가 나도 게임은 기본값으로 계속 돈다.
+import { ECONOMY } from '../config/economy';
 import { characters, DEFAULT_CHARACTER } from '../data/characters';
+import { equipmentById } from '../data/equipment';
 
 export interface StageRecord {
   cleared: boolean;
@@ -7,11 +9,18 @@ export interface StageRecord {
   bestStars: 0 | 1 | 2 | 3;
 }
 
+/** 장비: 가진 장비(id → 개수)와 지금 장착한 장비(최대 슬롯 수) */
+export interface EquipmentSave {
+  owned: Record<string, number>;
+  equipped: string[];
+}
+
 export interface SaveData {
   version: 1;
   stages: Record<string, StageRecord>;
   coins: number;
   selectedCharacter: string;
+  equipment: EquipmentSave;
   settings: { bgm: boolean; sfx: boolean };
 }
 
@@ -23,7 +32,14 @@ export interface KeyValueStorage {
 export const SAVE_KEY = 'deltarun.save';
 
 export function defaultSave(): SaveData {
-  return { version: 1, stages: {}, coins: 0, selectedCharacter: DEFAULT_CHARACTER, settings: { bgm: true, sfx: true } };
+  return {
+    version: 1,
+    stages: {},
+    coins: ECONOMY.startCoins,
+    selectedCharacter: DEFAULT_CHARACTER,
+    equipment: { owned: {}, equipped: [] },
+    settings: { bgm: true, sfx: true },
+  };
 }
 
 function sanitize(raw: unknown): SaveData {
@@ -33,6 +49,18 @@ function sanitize(raw: unknown): SaveData {
   if (r.version !== 1) return d; // 이후 버전이 생기면 여기서 migrate
   if (typeof r.selectedCharacter === 'string' && characters.some((c) => c.id === r.selectedCharacter)) {
     d.selectedCharacter = r.selectedCharacter; // 목록에 없는 값(지워진 캐릭터 등)은 기본값
+  }
+  if (r.equipment && typeof r.equipment === 'object') {
+    const eq = r.equipment as Partial<EquipmentSave>;
+    for (const [id, n] of Object.entries(eq.owned ?? {})) {
+      if (equipmentById(id) && Number.isFinite(n) && n > 0) d.equipment.owned[id] = Math.floor(n);
+    }
+    // 장착은 가진 장비만, 중복 없이, 슬롯 수까지
+    for (const id of eq.equipped ?? []) {
+      if (d.equipment.owned[id] && !d.equipment.equipped.includes(id) && d.equipment.equipped.length < ECONOMY.equipSlots) {
+        d.equipment.equipped.push(id);
+      }
+    }
   }
   if (typeof r.coins === 'number' && Number.isFinite(r.coins) && r.coins >= 0) d.coins = Math.floor(r.coins);
   if (r.settings && typeof r.settings === 'object') {
@@ -59,6 +87,13 @@ function browserStorage(): KeyValueStorage | null {
   } catch {
     return null;
   }
+}
+
+/** 한 판 결과를 저장에 반영한 뒤의 정보 */
+export interface ApplyResult {
+  newBest: boolean;
+  /** 클리어 보너스로 받은 코인 */
+  bonus: number;
 }
 
 export interface RunReport {
@@ -105,7 +140,7 @@ export class SaveStore {
   }
 
   /** 한 판 결과 반영. 최고점수가 갱신됐는지 돌려준다. */
-  applyRun(r: RunReport): { newBest: boolean } {
+  applyRun(r: RunReport): ApplyResult {
     const prev = this.record(r.stageId);
     const next: StageRecord = { ...prev };
     const newBest = r.score > prev.bestScore;
@@ -113,9 +148,44 @@ export class SaveStore {
     if (r.stars > prev.bestStars) next.bestStars = r.stars;
     if (r.cleared) next.cleared = true;
     this.data.stages[r.stageId] = next;
-    this.data.coins += r.coins; // 코인은 실패해도 누적
+    const bonus = r.cleared ? ECONOMY.stageClearBonus : 0; // 클리어할 때마다 보너스
+    this.data.coins += r.coins + bonus; // 판에서 주운 코인은 실패해도 누적
     this.save();
-    return { newBest };
+    return { newBest, bonus };
+  }
+
+  addCoins(n: number): void {
+    this.data.coins += n;
+  }
+
+  /** 코인을 쓴다. 모자라면 아무것도 바꾸지 않고 false */
+  spendCoins(n: number): boolean {
+    if (n < 0 || this.data.coins < n) return false;
+    this.data.coins -= n;
+    return true;
+  }
+
+  /** 장비를 얻는다. 처음 얻으면 isNew */
+  addEquipment(id: string): { isNew: boolean; count: number } {
+    if (!equipmentById(id)) throw new Error(`알 수 없는 장비: ${id}`);
+    const prev = this.data.equipment.owned[id] ?? 0;
+    this.data.equipment.owned[id] = prev + 1;
+    return { isNew: prev === 0, count: prev + 1 };
+  }
+
+  /** 장착·해제. 슬롯이 가득 차면 'full', 가지고 있지 않으면 'not_owned' */
+  toggleEquip(id: string): 'equipped' | 'unequipped' | 'full' | 'not_owned' {
+    const eq = this.data.equipment;
+    if (eq.equipped.includes(id)) {
+      eq.equipped = eq.equipped.filter((x) => x !== id);
+      this.save();
+      return 'unequipped';
+    }
+    if (!eq.owned[id]) return 'not_owned';
+    if (eq.equipped.length >= ECONOMY.equipSlots) return 'full';
+    eq.equipped.push(id);
+    this.save();
+    return 'equipped';
   }
 
   setCharacter(id: string): void {

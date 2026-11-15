@@ -25,6 +25,12 @@ npm run replays    # 봇으로 스테이지별 클리어 리플레이 재녹화
 - 테스트용으로 주소에 `?char=chaosking`(또는 `frisk`)을 붙이면 저장된 선택과 무관하게 그 캐릭터로 한 판 한다. 예: `?char=chaosking&stage=stage_01`
 - 캐릭터는 `src/data/characters.ts`에 추가한다. 겉모습만 다르고 게임 수치는 같다. 그림은 `manifest.json`의 `char_<id>`(로비용 360×480)와 `<id>_run`·`<id>_jump`·`<id>_slide`·`<id>_hit`(게임 중)을 쓰며, 게임 중 그림이 없으면 공용 `player_*`로 대신한다.
 
+## 장비·뽑기
+- 로비 왼쪽 아래 `장비`(E), `뽑기`(G). 장비는 최대 3개까지 동시에 장착되고, 효과는 시뮬레이션에 들어가 리플레이에도 기록됩니다.
+- 뽑기: 1회 30 / 10회 270 코인(10회는 레어 이상 1개 보장), 중복은 코인으로 환급. 시작 코인 100, 클리어 보너스 +50.
+- 숫자는 `src/config/economy.ts`, 장비 목록은 `src/data/equipment.ts` (이름·효과는 임시).
+- 테스트용: `?debug=1&coins=500` (코인 지정), `?equip=armor,bottle,sneakers` (장비 강제 장착).
+
 ## 조작
 
 | | 점프 (2단 가능) | 슬라이드 (누르는 동안) | 일시정지 |

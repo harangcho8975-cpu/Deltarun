@@ -108,7 +108,7 @@ export function updateDrops(s: SimState, events: SimEvent[]): void {
     }
     const coinBox: Box = { x: c.x - COIN_HALF, y: c.y + COIN_HALF, w: COIN_HALF * 2, h: COIN_HALF * 2 };
     if (overlaps(pb, coinBox)) {
-      s.coins++;
+      s.coins += 1 + s.mods.coinBonus;
       events.push({ type: 'dropCollect', id: c.id, x: c.x, y: c.y });
       continue;
     }

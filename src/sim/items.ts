@@ -6,7 +6,7 @@ export function applyItem(s: SimState, kind: ItemType): void {
   const e = cfg.effects;
   switch (kind) {
     case 'item_heal':
-      s.player.hp = Math.min(cfg.hp.max, s.player.hp + cfg.hp.heal);
+      s.player.hp = Math.min(s.maxHp, s.player.hp + cfg.hp.heal + s.mods.healBonus);
       break;
     case 'item_magnet':
       s.effects.magnet = e.magnetTicks;
@@ -41,11 +41,13 @@ export function tickTimers(s: SimState, events: SimEvent[]): void {
 
 /** 4장 8번: 자석 */
 export function applyMagnet(s: SimState, from: number, to: number): void {
-  if (s.effects.magnet <= 0) return;
+  const timed = s.effects.magnet > 0;
+  const radius = Math.max(timed ? cfg.effects.magnetRadius : 0, s.mods.passiveMagnetRadius);
+  if (radius <= 0) return;
   const p = s.player;
   const px = p.x + cfg.hitbox.run.w / 2;
   const py = p.y - cfg.hitbox.run.h / 2;
-  const r = cfg.effects.magnetRadius;
+  const r = radius;
   const pull = cfg.effects.magnetPullPerTick;
   for (let i = from; i < to; i++) {
     const e = s.entities[i];

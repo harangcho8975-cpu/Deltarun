@@ -13,9 +13,9 @@ export class ResultScene extends Phaser.Scene {
   create(r: RunResultData): void {
     Sound.stopBgm();
     const inOrder = stageOrder.includes(r.stageId);
-    const { newBest } = inOrder
+    const { newBest, bonus } = inOrder
       ? saveStore.applyRun({ stageId: r.stageId, cleared: r.outcome === 'cleared', score: r.score, stars: r.stars, coins: r.coins })
-      : { newBest: false };
+      : { newBest: false, bonus: 0 };
 
     this.add.tileSprite(0, 0, 1280, 720, 'bg_far').setOrigin(0);
     this.add.rectangle(0, 0, 1280, 720, COLORS.panel, 0.6).setOrigin(0);
@@ -32,14 +32,16 @@ export class ResultScene extends Phaser.Scene {
       ['거리', `${r.distance.toLocaleString()}m`],
       ['코인', `${r.coins}`],
     ];
+    if (bonus > 0) rows.push(['클리어 보너스', `+${bonus} 코인`]);
     rows.forEach(([k, v], i) => {
-      text(this, 470, 300 + i * 44, k, 26, COLORS.inkDim).setOrigin(0, 0.5);
-      text(this, 810, 300 + i * 44, v, 26, '#ffffff', true).setOrigin(1, 0.5);
+      text(this, 470, 290 + i * 40, k, 26, COLORS.inkDim).setOrigin(0, 0.5);
+      text(this, 810, 290 + i * 40, v, 26, '#ffffff', true).setOrigin(1, 0.5);
     });
-    this.add.rectangle(640, 432, 340, 2, 0xffffff, 0.4);
-    text(this, 470, 465, '점수', 30, '#ffffff', true).setOrigin(0, 0.5);
-    text(this, 810, 465, r.score.toLocaleString(), 36, '#ffd23f', true).setOrigin(1, 0.5);
-    if (newBest) text(this, 830, 465, '최고 기록!', 22, '#7cf29c', true).setOrigin(0, 0.5);
+    const scoreY = 290 + rows.length * 40 + 44;
+    this.add.rectangle(640, scoreY - 32, 340, 2, 0xffffff, 0.4);
+    text(this, 470, scoreY, '점수', 30, '#ffffff', true).setOrigin(0, 0.5);
+    text(this, 810, scoreY, r.score.toLocaleString(), 36, '#ffd23f', true).setOrigin(1, 0.5);
+    if (newBest) text(this, 830, scoreY, '최고 기록!', 22, '#7cf29c', true).setOrigin(0, 0.5);
 
     const idx = stageOrder.indexOf(r.stageId);
     const next = idx >= 0 ? stageOrder[idx + 1] : undefined;

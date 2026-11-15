@@ -281,3 +281,39 @@ test('카오스 킹: 대능력이 끝난 직후 3초 무적 동안 캐릭터가 
   expect([...anims].some((a) => a.includes('_hit'))).toBe(false); // 무적이 길어도 빨간 피격 그림으로 바뀌지 않는다
   expect(errors).toEqual([]);
 });
+
+const sceneEval = <T>(page: Page, fn: string): Promise<T> =>
+  page.evaluate((f) => new Function('g', `return (${f})`)(window.__deltaRun!.game), fn) as Promise<T>;
+
+test('뽑기: 코인으로 뽑으면 장비를 얻고, 장비 화면에서 최대 3개까지만 장착된다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/?debug=1&coins=2000');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  await page.keyboard.press('KeyG');
+  await expect.poll(() => activeScenes(page)).toContain('Gacha');
+  await page.keyboard.press('Digit0'); // 10회 뽑기
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: 'test-results/gacha.png' });
+  await page.keyboard.press('Digit0');
+  await page.keyboard.press('Digit0');
+  await page.waitForTimeout(400);
+  const owned = await sceneEval<number>(page, `Object.keys(JSON.parse(localStorage.getItem('deltarun.save')).equipment.owned).length`);
+  expect(owned).toBeGreaterThanOrEqual(3);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  await page.keyboard.press('KeyE');
+  await expect.poll(() => activeScenes(page)).toContain('Equipment');
+  // 보유 장비를 앞에서부터 눌러 4개 장착 시도
+  const ids = await sceneEval<string[]>(page, `Object.keys(JSON.parse(localStorage.getItem('deltarun.save')).equipment.owned)`);
+  expect(ids.length).toBeGreaterThanOrEqual(4);
+  const { toggle } = { toggle: async (id: string) => page.evaluate((i) => (window as any).__deltaRun.game.scene.getScene('Equipment').toggle(i), id) };
+  for (const id of ids.slice(0, 4)) {
+    await toggle(id);
+    await page.waitForTimeout(150);
+  }
+  const equipped = await sceneEval<string[]>(page, `JSON.parse(localStorage.getItem('deltarun.save')).equipment.equipped`);
+  expect(equipped).toHaveLength(3);
+  await page.screenshot({ path: 'test-results/equipment.png' });
+  expect(errors).toEqual([]);
+});

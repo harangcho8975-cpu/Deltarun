@@ -3,6 +3,7 @@ import { Sound } from '../audio/Sound';
 import { characterById } from '../data/characters';
 import { stageOrder, stages } from '../data/stages';
 import { saveStore } from '../save/store';
+import { ECONOMY } from '../config/economy';
 import { fullscreen } from '../ui/fullscreen';
 import { button, COLORS, text } from '../ui/style';
 
@@ -123,6 +124,11 @@ export class LobbyScene extends Phaser.Scene {
     }
 
 
+    // 왼쪽 아래: 장비·뽑기
+    const equipped = saveStore.data.equipment.equipped.length;
+    items.push(button(this, 130, 640, 200, 80, `장비  ${equipped}/${ECONOMY.equipSlots}`, () => this.scene.start('Equipment'), 0xdfe6f5, 26));
+    items.push(button(this, 350, 640, 200, 80, '뽑기', () => this.scene.start('Gacha'), 0xdfe6f5, 26));
+
     // 오른쪽 아래 [플레이]
     items.push(button(this, 1090, 640, 320, 100, '플레이  ▶', () => this.openStages(), COLORS.accent, 42));
 
@@ -232,6 +238,8 @@ export class LobbyScene extends Phaser.Scene {
       if (!this.stageOpen) {
         if (ev.code === 'Enter' || ev.code === 'Space') this.openStages();
         if (ev.code === 'KeyC') this.openCharacters();
+        if (ev.code === 'KeyE') this.scene.start('Equipment');
+        if (ev.code === 'KeyG') this.scene.start('Gacha');
         return;
       }
       if (ev.code === 'Escape' || ev.code === 'Backspace') this.closeStages();

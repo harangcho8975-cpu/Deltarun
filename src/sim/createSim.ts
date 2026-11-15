@@ -1,6 +1,7 @@
 import { gameConfig as cfg } from '../config/gameConfig';
 import type { StageData } from '../data/schema';
 import { bridgeGaps } from './collision';
+import { NO_MODS, type Modifiers } from './modifiers';
 import type { Entity, EntityKind, SimState, SkillId } from './types';
 
 export interface CreateSimOptions {
@@ -8,6 +9,8 @@ export interface CreateSimOptions {
   startX?: number;
   /** 캐릭터 스킬 (없으면 null) */
   skill?: SkillId | null;
+  /** 장착한 장비들의 효과 */
+  mods?: Partial<Modifiers>;
 }
 
 function sizeOf(kind: EntityKind) {
@@ -51,6 +54,8 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
   let cursor = 0;
   while (cursor < entities.length && entities[cursor].x + entities[cursor].w < cameraX - cfg.activeBehind) cursor++;
 
+  const mods: Modifiers = { ...NO_MODS, ...opts.mods };
+  const maxHp = cfg.hp.max + mods.maxHpBonus;
   const ground = stage.ground.map(([a, b]) => [a, b] as [number, number]);
   return {
     tick: 0,
@@ -62,7 +67,7 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
       y: cfg.groundY,
       vy: 0,
       state: 'run',
-      hp: cfg.hp.max,
+      hp: maxHp,
       jumpsUsed: 0,
       invulnTicks: 0,
       coyoteTicks: 0,
@@ -84,6 +89,8 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
     skill: opts.skill
       ? { id: opts.skill, timer: cfg.skills[opts.skill].intervalTicks, count: 0, ultimateTicks: 0, ultimateElapsed: 0, boxCoins: 0 }
       : null,
+    mods,
+    maxHp,
     drops: [],
     nextDropId: 0,
     debugInvincible: false,

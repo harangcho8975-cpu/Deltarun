@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ECONOMY } from '../src/config/economy';
 import { SAVE_KEY, SaveStore, type KeyValueStorage } from '../src/save/SaveStore';
 
 const memory = (init: Record<string, string> = {}): KeyValueStorage & { data: Record<string, string> } => {
@@ -9,7 +10,7 @@ const memory = (init: Record<string, string> = {}): KeyValueStorage & { data: Re
 describe('저장', () => {
   it('깨진 JSON이면 기본값', () => {
     const s = new SaveStore(memory({ [SAVE_KEY]: '{not json' }));
-    expect(s.data.coins).toBe(0);
+    expect(s.data.coins).toBe(ECONOMY.startCoins);
     expect(s.data.settings).toEqual({ bgm: true, sfx: true });
   });
 
@@ -33,7 +34,8 @@ describe('저장', () => {
     expect(s.isUnlocked(order, 'stage_02')).toBe(false);
     expect(s.applyRun({ stageId: 'stage_01', cleared: true, score: 400, stars: 2, coins: 1 }).newBest).toBe(false);
     expect(s.record('stage_01')).toEqual({ cleared: true, bestScore: 500, bestStars: 2 });
-    expect(s.data.coins).toBe(3);
+    // 시작 코인 + 실패한 판의 코인 2 + 클리어한 판의 코인 1 + 클리어 보너스
+    expect(s.data.coins).toBe(ECONOMY.startCoins + 2 + 1 + ECONOMY.stageClearBonus);
     expect(s.isUnlocked(order, 'stage_02')).toBe(true);
 
     const reloaded = new SaveStore(mem);

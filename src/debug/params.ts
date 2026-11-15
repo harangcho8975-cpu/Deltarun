@@ -11,6 +11,10 @@ export const params = {
   god: q.get('god') === '1',
   /** 테스트용: 저장된 선택과 무관하게 이 캐릭터로 플레이 (예: ?char=chaosking) */
   char: q.get('char') ?? undefined,
+  /** 테스트용: ?coins=500 으로 코인을 이만큼으로 맞춘다 (뽑기 시험용, 주소에 debug=1도 필요) */
+  coins: q.has('coins') ? Number(q.get('coins')) : undefined,
+  /** 테스트용: ?equip=heart,armor 처럼 저장과 무관하게 이 장비를 끼고 한 판 한다 (최대 3개) */
+  equip: q.get('equip') ? q.get('equip')!.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 3) : undefined,
   /** 테스트용: 이 틱에서 시뮬레이션을 멈춘다 */
   freezeAt: q.has('freezeAt') ? Number(q.get('freezeAt')) : undefined,
 };

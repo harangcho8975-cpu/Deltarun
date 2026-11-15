@@ -2,6 +2,7 @@ import { configHash, fnv1a } from '../config/gameConfig';
 import type { StageData } from '../data/schema';
 import { createSim } from './createSim';
 import { step } from './step';
+import type { Modifiers } from './modifiers';
 import type { InputFrame, SimState, SkillId } from './types';
 
 export type ReplayAction = 'J' | 'S+' | 'S-';
@@ -11,6 +12,8 @@ export interface Replay {
   configHash: string;
   /** 녹화한 캐릭터의 스킬 (없으면 스킬 없음) */
   skill?: SkillId;
+  /** 녹화할 때 장착했던 장비 효과 (없으면 장비 없음) */
+  mods?: Partial<Modifiers>;
   inputs: [number, ReplayAction][];
 }
 
@@ -19,7 +22,7 @@ export class ReplayRecorder {
   private inputs: [number, ReplayAction][] = [];
   private slide = false;
 
-  constructor(private stageId: string, private skill?: SkillId | null) {}
+  constructor(private stageId: string, private skill?: SkillId | null, private mods?: Partial<Modifiers>) {}
 
   record(tick: number, input: InputFrame): void {
     if (input.jumpPressed) this.inputs.push([tick, 'J']);
@@ -32,6 +35,7 @@ export class ReplayRecorder {
   toJSON(): Replay {
     const out: Replay = { stageId: this.stageId, configHash: configHash(), inputs: this.inputs.map((x) => [x[0], x[1]]) };
     if (this.skill) out.skill = this.skill;
+    if (this.mods) out.mods = this.mods;
     return out;
   }
 }
@@ -62,7 +66,7 @@ export interface RunResult {
 }
 
 export function runReplay(stage: StageData, replay: Replay, maxTicks = 60 * 60 * 5, collectHashes = false): RunResult {
-  const s = createSim(stage, { skill: replay.skill ?? null });
+  const s = createSim(stage, { skill: replay.skill ?? null, mods: replay.mods });
   const player = new ReplayPlayer(replay);
   const hashes: string[] = [];
   while (s.outcome === 'playing' && s.tick < maxTicks) {
@@ -78,7 +82,7 @@ export function hashState(s: SimState): string {
   const parts: (string | number)[] = [
     s.tick, s.outcome, s.cameraX, p.x, p.y, p.vy, p.state, p.hp, p.jumpsUsed, p.invulnTicks,
     p.coyoteTicks, p.jumpBufferTicks, s.effects.magnet, s.effects.giant, s.effects.boost,
-    s.boostGroundGrace, s.jellyScore, s.jelliesTaken, s.coins, s.cursor,
+    s.boostGroundGrace, s.jellyScore, s.jelliesTaken, s.coins, s.cursor, s.maxHp,
   ];
   if (s.skill) parts.push(s.skill.timer, s.skill.count, s.skill.ultimateTicks, s.skill.ultimateElapsed, s.skill.boxCoins);
   if (s.drops.length) parts.push(s.drops.map((d) => `${d.id}:${d.x.toFixed(3)}:${d.y.toFixed(3)}:${d.delay}:${d.settled ? 1 : 0}`).join(','));

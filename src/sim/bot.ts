@@ -6,6 +6,7 @@ import type { StageData } from '../data/schema';
 import { cloneSim, createSim } from './createSim';
 import { ReplayRecorder, type Replay } from './replay';
 import { step } from './step';
+import type { Modifiers } from './modifiers';
 import type { InputFrame, SimState, SkillId } from './types';
 
 interface Plan {
@@ -100,9 +101,9 @@ export interface BotRun {
   hits: number;
 }
 
-export function playWithBot(stage: StageData, maxTicks = 60 * 60 * 5, skill: SkillId | null = null): BotRun {
-  const s = createSim(stage, { skill });
-  const rec = new ReplayRecorder(stage.id, skill);
+export function playWithBot(stage: StageData, maxTicks = 60 * 60 * 5, skill: SkillId | null = null, mods?: Partial<Modifiers>): BotRun {
+  const s = createSim(stage, { skill, mods });
+  const rec = new ReplayRecorder(stage.id, skill, mods);
   let hits = 0;
   while (s.outcome === 'playing' && s.tick < maxTicks) {
     const plan = botChoose(s);
