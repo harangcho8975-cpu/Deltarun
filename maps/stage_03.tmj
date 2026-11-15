@@ -37,7 +37,7 @@
   {
    "name": "speed",
    "type": "int",
-   "value": 700
+   "value": 620
   },
   {
    "name": "stars",

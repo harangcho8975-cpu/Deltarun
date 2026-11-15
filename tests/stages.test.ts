@@ -16,8 +16,8 @@ describe('스테이지 데이터', () => {
     expect(validateStage(testStage)).toEqual([]);
   });
   it('기획서의 길이·속도', () => {
-    expect([stages.stage_01.length, stages.stage_01.speed]).toEqual([12000, 540]);
+    expect([stages.stage_01.length, stages.stage_01.speed]).toEqual([12000, 620]);
     expect([stages.stage_02.length, stages.stage_02.speed]).toEqual([18000, 620]);
-    expect([stages.stage_03.length, stages.stage_03.speed]).toEqual([24000, 700]);
+    expect([stages.stage_03.length, stages.stage_03.speed]).toEqual([24000, 620]);
   });
 });
