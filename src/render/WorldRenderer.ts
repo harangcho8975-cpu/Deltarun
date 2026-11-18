@@ -230,9 +230,7 @@ export class WorldRenderer {
     this.player.setPosition(footX, y);
     this.player.setScale(s.effects.giant > 0 ? cfg.hitbox.giantScale : 1);
     this.player.setVisible(p.invulnTicks === 0 || Math.floor(p.invulnTicks / 8) % 2 === 0);
-    const flying = p.state === 'fly';
-    // 비행 중에는 올라가면 머리를 들고 내려가면 숙인다. 제빌 대능력 중에는 보라빛
-    this.player.setAngle(flying ? Math.max(-25, Math.min(25, p.vy / 25)) : 0);
+    // 제빌 대능력 중에는 보라빛 (비행 중에도 각도는 바꾸지 않는다)
     this.player.setTint(s.effects.boost > 0 ? 0x9ff3ff : s.jevil && s.jevil.phase > 0 ? 0xe0b3ff : 0xffffff);
   }
 

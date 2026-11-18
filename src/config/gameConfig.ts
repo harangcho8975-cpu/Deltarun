@@ -87,8 +87,8 @@ export const gameConfig = {
     //    공중(땅에 닿지 않은 상태)에서 슬라이드를 누르면 스택 1개로 상자가 화면 왼쪽 위에서 사선으로 날아와 터지고,
     //    사방으로 퍼진 조각이 닿는 장애물을 부순다.
     //  - 대능력: 20초마다. 발동 중 무적, 구멍 위도 바닥으로 본다.
-    //    상자 폭격(3초, 상자 5개) → 돌진(2초, 앞으로 날아감) → 비행(7초, 누르면 상승·떼면 하강, 슬라이드로 낫)
-    //    → 심판의 낫(3초, 거대한 낫이 천천히 떨어지다 화면 절반에서 섬광과 함께 화면 안 장애물을 모두 부숨)
+    //    상자 폭격(3초, 상자 5개) → 돌진(2초, 두 배 속도. 높이는 비행처럼 직접 조절) → 비행(7초, 누르면 상승·떼면 하강, 슬라이드로 낫)
+    //    → 심판의 낫(3초, 거대한 낫이 천천히 떨어지다 화면 절반에서 섬광과 함께 화면 안 장애물을 모두 부수고 사라짐)
     jevil: {
       startStacks: 2,
       stacksPerUltimate: 2,
@@ -114,14 +114,13 @@ export const gameConfig = {
       ] as [number, number][],
       dashTicks: 120, // 돌진 2초
       dashSpeedMul: 2, // 돌진 중 스크롤 속도 배율
-      flyY: 400, // 돌진하며 올라가는 높이 (발 y)
-      dashRisePerTick: 10,
       flightTicks: 420, // 비행 7초
-      flightUpAccel: 3800, // 누르고 있으면 위로 (px/s²)
-      flightGravity: 3200, // 떼면 아래로
-      flightMaxVy: 720,
+      // 돌진·비행 공통: 누르고 있으면 위로, 떼면 아래로 (속도가 부드럽게 바뀐다)
+      flightUpAccel: 2600, // px/s²
+      flightGravity: 2200,
+      flightMaxVy: 600,
       ceilingY: 150, // 비행 중 발 y의 최소값 (화면 위로 나가지 않게)
-      scythe: { swingTicks: 18, reach: 260, height: 280 },
+      scythe: { swingTicks: 18, reach: 440, height: 440 }, // 낫 판정: 앞으로 440px, 위아래 440px
       judgementTicks: 180, // 심판의 낫 3초
       bigScythe: { startY: -360, endY: 560, flashAtY: 360 }, // 낫 중심 y. 화면 절반(360)을 지날 때 섬광
       afterUltimateTicks: 60, // 끝난 뒤 1초 동안 무적 + 구멍 위 바닥
@@ -139,7 +138,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 12;
+export const SIM_VERSION = 13;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {

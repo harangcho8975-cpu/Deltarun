@@ -35,13 +35,15 @@ export function scytheBox(s: SimState): Box | null {
   const j = s.jevil;
   if (!j || j.swing <= 0) return null;
   const sc = J.scythe;
-  return { x: footX(s.player), y: s.player.y - 50 + sc.height / 2, w: sc.reach, h: sc.height };
+  // 플레이어 몸 가운데를 기준으로 위아래 절반씩, 등 뒤 조금부터 앞으로 reach만큼
+  const cy = s.player.y - cfg.hitbox.run.h / 2;
+  return { x: footX(s.player) - 40, y: cy + sc.height / 2, w: sc.reach + 40, h: sc.height };
 }
 
 /** 심판의 낫 중심 y (화면 좌표). 4단계가 아니면 null */
 export function bigScytheY(s: SimState): number | null {
   const j = s.jevil;
-  if (!j || j.phase !== 4) return null;
+  if (!j || j.phase !== 4 || j.judged) return null; // 섬광이 터지면 낫은 사라진다
   const b = J.bigScythe;
   return b.startY + ((b.endY - b.startY) * j.elapsed) / J.judgementTicks;
 }
@@ -67,13 +69,12 @@ function setPhase(s: SimState, j: JevilState, phase: JevilPhase, events: SimEven
   j.phase = phase;
   j.elapsed = 0;
   const p = s.player;
-  if (phase === 2 || phase === 3) {
-    p.state = 'fly';
-    p.vy = 0;
+  if (phase === 2) {
+    p.state = 'fly'; // 돌진이 시작되면 그때의 높이·속도 그대로 비행 조작으로 넘어간다
   } else if (phase === 4) {
-    // 비행이 끝나면 떨어지기 시작한다. 2단 점프 한 번은 남겨 둔다.
+    // 비행이 끝나면 그때의 속도를 이어받아 자연스럽게 떨어진다. 2단 점프 한 번은 남겨 둔다.
     p.state = 'fall';
-    p.vy = 0;
+    p.vy = Math.max(0, p.vy);
     p.jumpsUsed = 1;
     p.coyoteTicks = 0;
     j.swing = 0;
@@ -83,16 +84,8 @@ function setPhase(s: SimState, j: JevilState, phase: JevilPhase, events: SimEven
 
 /** 4장 5번 대신: 돌진·비행 중의 수직 이동 (player.ts에서 부른다) */
 export function updateFlight(s: SimState): void {
-  const j = s.jevil!;
   const p = s.player;
-  if (j.phase === 2) {
-    // 돌진: 정해진 높이까지 곧게 떠오른다
-    p.vy = 0;
-    if (p.y > J.flyY) p.y = Math.max(J.flyY, p.y - J.dashRisePerTick);
-    else p.y = Math.min(J.flyY, p.y + J.dashRisePerTick);
-    return;
-  }
-  // 비행: 누르고 있으면 올라가고, 떼면 내려간다 (지오메트리 대시의 비행기처럼)
+  // 돌진·비행: 누르고 있으면 올라가고, 떼면 내려간다 (지오메트리 대시의 비행기처럼)
   const a = p.jumpHeld ? -J.flightUpAccel : J.flightGravity;
   const vy0 = p.vy;
   p.vy = Math.max(-J.flightMaxVy, Math.min(J.flightMaxVy, vy0 + a / TICK_RATE));

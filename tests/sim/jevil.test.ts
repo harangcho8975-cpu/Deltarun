@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { gameConfig as cfg } from '../../src/config/gameConfig';
 import { hashState, ReplayPlayer, ReplayRecorder, step, type InputFrame, type SimEvent, type SimState } from '../../src/sim';
-import { bigScytheY } from '../../src/sim/jevil';
+import { bigScytheY, scytheBox } from '../../src/sim/jevil';
 import { NONE, flatStage, skillSim } from '../helpers';
 
 const J = cfg.skills.jevil;
@@ -87,16 +87,32 @@ describe('제빌 대능력', () => {
     expect(s.jevil!.timer).toBe(1200);
   });
 
-  it('돌진 중에는 두 배 속도로 앞으로 날아간다', () => {
+  it('돌진 중에는 두 배 속도로 앞으로 날아가고, 높이는 고정되지 않고 직접 조절한다', () => {
     const s = jv();
     toUltimate(s);
     go(s, J.boxPhaseTicks);
+    expect(s.jevil!.phase).toBe(2);
+    expect(s.player.state).toBe('fly');
     const x0 = s.cameraX;
     go(s, 10);
     expect(s.cameraX - x0).toBeCloseTo((s.stage.speed * J.dashSpeedMul * 10) / 60, 6);
-    expect(s.player.state).toBe('fly');
-    go(s, J.dashTicks - 10);
-    expect(s.player.y).toBe(J.flyY);
+    expect(s.player.y).toBe(cfg.groundY); // 누르지 않으면 바닥 높이 그대로
+    go(s, 30, HOLD);
+    const up = s.player.y;
+    expect(up).toBeLessThan(cfg.groundY - 100); // 누르면 올라간다
+    go(s, 45, NONE);
+    expect(s.player.y).toBeGreaterThan(up); // 떼면 (관성으로 조금 더 오른 뒤) 다시 내려간다
+  });
+
+  it('낫 판정은 앞으로 넓고 위아래로 크다', () => {
+    const s = jv();
+    toUltimate(s);
+    go(s, J.boxPhaseTicks + J.dashTicks + 30);
+    s.jevil!.swing = 1;
+    const b = scytheBox(s)!;
+    expect(b.w).toBeGreaterThanOrEqual(J.scythe.reach);
+    expect(b.h).toBe(J.scythe.height);
+    expect(J.scythe.reach).toBeGreaterThanOrEqual(400);
   });
 
   it('비행: 누르고 있으면 올라가고, 떼면 내려간다. 천장·바닥을 넘지 않는다', () => {
@@ -141,12 +157,15 @@ describe('제빌 대능력', () => {
       { id: s.entities.length + 1, kind: 'obstacle_air', x: cam + 1180, y: 450, w: 80, h: 300, alive: true },
     );
     let judged: SimEvent[] = [];
+    let lastY = 0;
     for (let t = 0; t < J.judgementTicks && !judged.length; t++) {
+      lastY = bigScytheY(s)!;
       judged = of(step(s, NONE), 'jevilJudgement');
     }
     expect(judged).toHaveLength(1);
-    expect(bigScytheY(s)!).toBeGreaterThanOrEqual(J.bigScythe.flashAtY);
-    expect(bigScytheY(s)!).toBeLessThan(J.bigScythe.flashAtY + 10);
+    expect(lastY).toBeLessThan(J.bigScythe.flashAtY); // 화면 절반 직전까지 떨어지다가
+    expect(lastY).toBeGreaterThan(J.bigScythe.flashAtY - 10);
+    expect(bigScytheY(s)).toBeNull(); // 섬광이 터지면 낫은 사라진다
     expect(s.entities.slice(-2).every((e) => !e.alive)).toBe(true);
     const ev = go(s, J.judgementTicks);
     expect(of(ev, 'jevilJudgement')).toHaveLength(0); // 한 번만
