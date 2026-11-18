@@ -58,6 +58,7 @@ export function bridgeGaps(segs: [number, number][], minGap: number): [number, n
 /** 이번 틱에 발밑을 바닥으로 볼지 (부스터·거대화 예외 포함) */
 export function hasFloorUnder(s: SimState): boolean {
   if (s.effects.boost > 0 || s.boostGroundGrace > 0) return true;
+  if (s.jevil && s.jevil.phase > 0) return true; // 제빌 대능력 중에는 구멍 위도 바닥
   const fx = footX(s.player);
   if (s.effects.giant > 0) return inSegments(s.giantGround, fx);
   return inSegments(s.ground, fx);

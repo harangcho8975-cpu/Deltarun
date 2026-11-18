@@ -16,6 +16,7 @@ mkdirSync(dir, { recursive: true });
 const variants: { label: string; suffix: string; skill: SkillId | null; mods?: Partial<Modifiers> }[] = [
   { label: '기본', suffix: '', skill: null },
   { label: '카오스 킹', suffix: '.chaosking', skill: 'chaosKing' },
+  { label: '제빌', suffix: '.jevil', skill: 'jevil' },
   { label: '장비 3종(갑옷·물통·운동화)', suffix: '.equipped', skill: null, mods: modsFor(['armor', 'bottle', 'sneakers']) },
 ];
 

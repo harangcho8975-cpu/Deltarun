@@ -73,6 +73,7 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
       coyoteTicks: 0,
       jumpBufferTicks: 0,
       slideHeld: false,
+      jumpHeld: false,
     },
     effects: { magnet: 0, giant: 0, boost: 0 },
     boostGroundGrace: 0,
@@ -87,12 +88,34 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
     giantGround: bridgeGaps(ground, cfg.giantGapBridge),
     stage,
     skill: opts.skill
-      ? { id: opts.skill, timer: cfg.skills[opts.skill].intervalTicks, count: 0, ultimateTicks: 0, ultimateElapsed: 0, boxCoins: 0 }
+      ? {
+          id: opts.skill,
+          timer: opts.skill === 'chaosKing' ? cfg.skills.chaosKing.intervalTicks : 0,
+          count: 0,
+          ultimateTicks: 0,
+          ultimateElapsed: 0,
+          boxCoins: 0,
+        }
       : null,
     mods,
     maxHp,
     drops: [],
     nextDropId: 0,
+    jevil:
+      opts.skill === 'jevil'
+        ? {
+            stacks: cfg.skills.jevil.startStacks,
+            timer: cfg.skills.jevil.ultimateIntervalTicks,
+            phase: 0,
+            elapsed: 0,
+            swing: 0,
+            judged: false,
+            slidePrev: false,
+            boxes: [],
+            shards: [],
+            nextId: 0,
+          }
+        : null,
     debugInvincible: false,
   };
 }
@@ -105,6 +128,9 @@ export function cloneSim(s: SimState): SimState {
     effects: { ...s.effects },
     skill: s.skill ? { ...s.skill } : null,
     drops: s.drops.map((d) => ({ ...d })),
+    jevil: s.jevil
+      ? { ...s.jevil, boxes: s.jevil.boxes.map((b) => ({ ...b })), shards: s.jevil.shards.map((x) => ({ ...x })) }
+      : null,
     entities: s.entities.map((e) => ({ ...e })),
   };
 }

@@ -127,8 +127,8 @@ test('로비 캐릭터를 누르면 격자 목록 → 카드를 누르면 정보
     const s = window.__deltaRun!.game.scene.getScene('Characters') as unknown as { grid: { list: { x: number; y: number; getData(k: string): string }[] } };
     return s.grid.list.map((c) => ({ x: c.x, y: c.y, id: c.getData('id') }));
   });
-  expect(cards.map((c) => c.id)).toEqual(['orange', 'blueberry', 'mint', 'frisk', 'chaosking']);
-  expect(new Set(cards.map((c) => c.y)).size).toBe(1); // 한 줄에 왼쪽부터
+  expect(cards.map((c) => c.id)).toEqual(['orange', 'blueberry', 'mint', 'frisk', 'chaosking', 'jevil']);
+  expect(new Set(cards.slice(0, 5).map((c) => c.y)).size).toBe(1); // 한 줄에 5장씩 왼쪽부터
   expect(cards[0].x).toBeLessThan(cards[1].x);
 
   await page.mouse.click(cards[1].x, cards[1].y); // 블루베리
@@ -230,7 +230,7 @@ test('카오스 킹 대능력이 끝나면 쌓인 코인이 모두 떨어져 바
       };
     });
 
-  await page.goto('/?char=chaosking&stage=stage_01&god=1');
+  await page.goto('/?char=chaosking&stage=stage_flat&god=1');
   // 대능력은 1080틱(약 18초)에 끝난다. 끝난 직후를 잡는다.
   await expect.poll(async () => (await st()).tick, { timeout: 150_000, intervals: [100] }).toBeGreaterThan(1082);
   const start = await st();
@@ -260,7 +260,7 @@ test('카오스 킹: 대능력이 끝난 직후 3초 무적 동안 캐릭터가 
       return { tick: g.sim.tick, inv: g.sim.player.invulnTicks, vis: g.world.player.visible, ult: g.sim.skill.ultimateTicks, anim: g.world.playerAnim };
     });
 
-  await page.goto('/?char=chaosking&stage=stage_01&god=1');
+  await page.goto('/?char=chaosking&stage=stage_flat&god=1');
   // 대능력이 끝나는 1080틱 바로 뒤부터 무적(180틱 = 3초) 동안 캐릭터가 보였다 안 보였다 하는지 센다
   await expect.poll(async () => (await sample()).tick, { timeout: 150_000, intervals: [50] }).toBeGreaterThan(1080);
   const first = await sample();
@@ -342,5 +342,48 @@ test('이벤트 탭: 출석 보상은 하루 한 번, 캐릭터 뽑기로 캐릭
   await page.screenshot({ path: 'test-results/char-gacha.png' });
   const owned = await page.evaluate(() => JSON.parse(localStorage.getItem('deltarun.save')!).ownedCharacters.length as number);
   expect(owned).toBeGreaterThan(2);
+  expect(errors).toEqual([]);
+});
+
+test('제빌: 공중 슬라이드로 상자, 대능력 상자 폭격 → 돌진 → 비행 → 심판의 낫', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors = collectErrors(page);
+  type J = { phase: number; stacks: number; boxes: unknown[]; shards: unknown[] };
+  const st = () =>
+    page.evaluate(() => {
+      const g = window.__deltaRun!.game.scene.getScene('Game') as unknown as { sim: { tick: number; player: { state: string; y: number }; jevil: J } };
+      const j = g.sim.jevil;
+      return { tick: g.sim.tick, state: g.sim.player.state, y: g.sim.player.y, phase: j.phase, stacks: j.stacks, boxes: j.boxes.length, shards: j.shards.length };
+    });
+  // 1초 뒤 대능력
+  await page.goto('/?char=jevil&stage=stage_03&god=1&ult=1');
+  await expect.poll(async () => (await st()).tick, { timeout: 30_000 }).toBeGreaterThan(10);
+  expect((await st()).stacks).toBe(2);
+  // 소능력: 점프 후 공중에서 슬라이드
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(150);
+  await page.keyboard.down('ArrowDown');
+  await page.waitForTimeout(100);
+  await page.keyboard.up('ArrowDown');
+  await expect.poll(async () => (await st()).stacks, { timeout: 5000 }).toBe(1);
+  await expect.poll(async () => (await st()).shards, { timeout: 5000, intervals: [30] }).toBeGreaterThan(0);
+  await page.screenshot({ path: 'test-results/jevil-minor.png' });
+
+  await expect.poll(async () => (await st()).phase, { timeout: 30_000, intervals: [50] }).toBe(1);
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: 'test-results/jevil-boxes.png' });
+  await expect.poll(async () => (await st()).phase, { timeout: 30_000, intervals: [50] }).toBe(3);
+  expect((await st()).state).toBe('fly');
+  // 누르고 있으면 올라간다
+  const y0 = (await st()).y;
+  await page.keyboard.down('Space');
+  await expect.poll(async () => (await st()).y, { timeout: 10_000, intervals: [30] }).toBeLessThan(y0 - 40);
+  await page.keyboard.up('Space');
+  await page.screenshot({ path: 'test-results/jevil-flight.png' });
+  await expect.poll(async () => (await st()).phase, { timeout: 30_000, intervals: [50] }).toBe(4);
+  await page.waitForTimeout(1600);
+  await page.screenshot({ path: 'test-results/jevil-judgement.png' });
+  await expect.poll(async () => (await st()).phase, { timeout: 30_000, intervals: [50] }).toBe(0);
+  expect((await st()).stacks).toBe(3); // 1 + 2
   expect(errors).toEqual([]);
 });

@@ -6,6 +6,7 @@
 // 박스 움직임은 사인 함수 대신 smoothstep(사칙연산만)을 써서 브라우저가 달라도 결과가 같다.
 import { gameConfig as cfg, TICK_RATE } from '../config/gameConfig';
 import { overlaps, playerBox, type Box } from './collision';
+import { updateJevil } from './jevil';
 import type { DropCoin, Entity, SimEvent, SimState } from './types';
 
 const isObstacle = (e: Entity) => e.kind.startsWith('obstacle_');
@@ -18,8 +19,8 @@ function smoothPingPong(p: number): number {
 /** 대능력 박스의 지금 위치 (월드 좌표, 아랫변 기준). 대능력 중이 아니면 null. */
 export function ultimateBox(s: SimState): Box | null {
   const k = s.skill;
-  if (!k || k.ultimateTicks <= 0) return null;
-  const c = cfg.skills[k.id].box;
+  if (!k || k.id !== 'chaosKing' || k.ultimateTicks <= 0) return null;
+  const c = cfg.skills.chaosKing.box;
   const phase = (k.ultimateElapsed % c.periodTicks) / c.periodTicks;
   const bottom = c.bottomMin + (c.bottomMax - c.bottomMin) * smoothPingPong(phase);
   return { x: s.cameraX + c.screenX, y: bottom, w: c.w, h: c.h };
@@ -72,9 +73,9 @@ function endUltimate(s: SimState, box: Box, events: SimEvent[]): void {
   k.ultimateTicks = 0;
   k.ultimateElapsed = 0;
   k.boxCoins = 0;
-  k.timer = cfg.skills[k.id].intervalTicks;
+  k.timer = cfg.skills.chaosKing.intervalTicks;
   // 대능력이 끝난 직후 잠깐 무적
-  s.player.invulnTicks = Math.max(s.player.invulnTicks, cfg.skills[k.id].invulnAfterUltimateTicks);
+  s.player.invulnTicks = Math.max(s.player.invulnTicks, cfg.skills.chaosKing.invulnAfterUltimateTicks);
 }
 
 /** 4장 8.6번: 떨어진 코인의 움직임과 줍기. 상자 안에서 대기 → 날아오름 → 바닥에서 튕김 → 멈춤 → 줍거나 화면 밖으로 사라짐 */
@@ -142,7 +143,11 @@ export function updateDrops(s: SimState, events: SimEvent[]): void {
 export function updateSkill(s: SimState, from: number, to: number, events: SimEvent[]): void {
   const k = s.skill;
   if (!k) return;
-  const c = cfg.skills[k.id];
+  if (k.id === 'jevil') {
+    updateJevil(s, from, to, events);
+    return;
+  }
+  const c = cfg.skills.chaosKing;
 
   if (k.ultimateTicks > 0) {
     const box = ultimateBox(s)!;

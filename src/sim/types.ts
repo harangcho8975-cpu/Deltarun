@@ -2,15 +2,17 @@
 import type { ItemType, JellyType, ObstacleType, StageData } from '../data/schema';
 import type { Modifiers } from './modifiers';
 
-export type PlayerState = 'run' | 'jump' | 'doubleJump' | 'fall' | 'slide' | 'dead';
+export type PlayerState = 'run' | 'jump' | 'doubleJump' | 'fall' | 'slide' | 'fly' | 'dead';
 export type Outcome = 'playing' | 'cleared' | 'failed';
 export type EffectName = 'magnet' | 'giant' | 'boost';
 export type EntityKind = ObstacleType | JellyType | ItemType;
-export type SkillId = 'chaosKing';
+export type SkillId = 'chaosKing' | 'jevil';
 
 export interface InputFrame {
   jumpPressed: boolean;
   slideHeld: boolean;
+  /** 점프(왼쪽 화면·스페이스)를 누르고 있는가. 제빌 비행에서만 쓴다 */
+  jumpHeld?: boolean;
 }
 
 export const NO_INPUT: InputFrame = { jumpPressed: false, slideHeld: false };
@@ -40,6 +42,47 @@ export interface PlayerSim {
   coyoteTicks: number;
   jumpBufferTicks: number;
   slideHeld: boolean;
+  jumpHeld: boolean;
+}
+
+/** 제빌 상자: 화면 좌표로 왼쪽 위에서 목표점까지 곧게 날아가 터진다 */
+export interface JevilBox {
+  id: number;
+  /** 날아온 틱 (flightTicks가 되면 터짐) */
+  t: number;
+  tx: number;
+  ty: number;
+}
+
+/** 상자가 터져 퍼지는 조각 (월드 좌표, 중심) */
+export interface JevilShard {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+}
+
+/** 0 평소, 1 상자 폭격, 2 돌진, 3 비행, 4 심판의 낫 */
+export type JevilPhase = 0 | 1 | 2 | 3 | 4;
+
+export interface JevilState {
+  stacks: number;
+  /** 다음 대능력까지 남은 틱 (평소에만 줄어든다) */
+  timer: number;
+  phase: JevilPhase;
+  /** 지금 단계가 시작된 뒤 지난 틱 */
+  elapsed: number;
+  /** 낫 휘두르기 남은 틱 */
+  swing: number;
+  /** 심판의 섬광이 이미 터졌는가 */
+  judged: boolean;
+  /** 지난 틱에 슬라이드를 누르고 있었는가 (누르는 순간 판정용) */
+  slidePrev: boolean;
+  boxes: JevilBox[];
+  shards: JevilShard[];
+  nextId: number;
 }
 
 /** 캐릭터 스킬 진행 상태. 스킬이 없는 캐릭터는 SimState.skill이 null */
@@ -101,6 +144,8 @@ export interface SimState {
   /** 대능력이 끝난 뒤 바닥에 떨어져 있는 코인들 */
   drops: DropCoin[];
   nextDropId: number;
+  /** 제빌일 때만 */
+  jevil: JevilState | null;
   debugInvincible: boolean;
 }
 
@@ -117,5 +162,10 @@ export type SimEvent =
   | { type: 'boxHit'; id: number; boxCoins: number }
   | { type: 'ultimateEnd'; coins: number; x: number; y: number }
   | { type: 'dropCollect'; id: number; x: number; y: number }
+  | { type: 'jevilBox'; ultimate: boolean }
+  | { type: 'jevilBurst'; x: number; y: number }
+  | { type: 'jevilPhase'; phase: JevilPhase }
+  | { type: 'jevilSwing' }
+  | { type: 'jevilJudgement'; destroyed: number }
   | { type: 'cleared' }
   | { type: 'failed'; reason: 'hp' | 'fall' };

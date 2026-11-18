@@ -4,6 +4,7 @@ import { overlaps, playerBox } from './collision';
 import { applyItem, applyMagnet, tickTimers } from './items';
 import { updateGround, updateJumpBuffer, updatePlayer } from './player';
 import { distanceMeters } from './scoring';
+import { jevilSpeedMul, jevilUltimate } from './jevil';
 import { updateDrops, updateSkill } from './skills';
 import { activeRange } from './spatialIndex';
 import type { InputFrame, SimEvent, SimState } from './types';
@@ -25,7 +26,7 @@ export function step(s: SimState, input: InputFrame): SimEvent[] {
   updateJumpBuffer(s, input);
 
   // 2. 스크롤
-  const speed = s.stage.speed * (s.effects.boost > 0 ? cfg.effects.boostMultiplier : 1);
+  const speed = s.stage.speed * (s.effects.boost > 0 ? cfg.effects.boostMultiplier : 1) * jevilSpeedMul(s);
   s.cameraX += speed / TICK_RATE;
   p.x = s.cameraX + cfg.playerScreenX;
   s.distance = distanceMeters(s.cameraX);
@@ -89,7 +90,7 @@ export function step(s: SimState, input: InputFrame): SimEvent[] {
         if (s.effects.giant > 0 || s.effects.boost > 0) {
           e.alive = false;
           events.push({ type: 'smash', id: e.id });
-        } else if (p.invulnTicks > 0 || s.debugInvincible) {
+        } else if (p.invulnTicks > 0 || s.debugInvincible || jevilUltimate(s)) {
           // 무시
         } else {
           const damage = Math.max(1, cfg.hp.hitDamage - s.mods.hitDamageReduce);

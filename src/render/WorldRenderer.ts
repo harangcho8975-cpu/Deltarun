@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameConfig as cfg } from '../config/gameConfig';
 import type { StageData } from '../data/schema';
 import { playerBox } from '../sim/collision';
+import { bigScytheY, jevilBoxPos, scytheBox } from '../sim/jevil';
 import { ultimateBox } from '../sim/skills';
 import type { Entity, EntityKind, SimEvent, SimState } from '../sim/types';
 import { activeCharacter } from '../ui/activeCharacter';
@@ -44,6 +45,41 @@ class SpritePool {
   }
 }
 
+/** id가 붙은 시뮬레이션 물체를 이미지로 그린다 (없어진 id는 숨겨 재사용) */
+class IdImages {
+  private scene!: Phaser.Scene;
+  private key = '';
+  private depth = 0;
+  private live = new Map<number, Phaser.GameObjects.Image>();
+  private free: Phaser.GameObjects.Image[] = [];
+
+  init(scene: Phaser.Scene, key: string, depth: number): void {
+    this.scene = scene;
+    this.key = key;
+    this.depth = depth;
+  }
+
+  sync(list: { id: number; x: number; y: number; angle?: number; alpha?: number }[]): void {
+    const seen = new Set<number>();
+    for (const o of list) {
+      seen.add(o.id);
+      let img = this.live.get(o.id);
+      if (!img) {
+        img = this.free.pop() ?? this.scene.add.image(0, 0, this.key).setDepth(this.depth);
+        img.setVisible(true);
+        this.live.set(o.id, img);
+      }
+      img.setPosition(o.x, o.y).setAngle(o.angle ?? 0).setAlpha(o.alpha ?? 1);
+    }
+    for (const [id, img] of this.live) {
+      if (seen.has(id)) continue;
+      img.setVisible(false);
+      this.free.push(img);
+      this.live.delete(id);
+    }
+  }
+}
+
 export interface RenderSnapshot {
   cameraX: number;
   playerY: number;
@@ -64,6 +100,12 @@ export class WorldRenderer {
   /** 대능력이 끝난 뒤 떨어진 코인의 스프라이트 (위치·상태는 모두 시뮬레이션이 정한다) */
   private dropSprites = new Map<number, Phaser.GameObjects.Image>();
   private dropFree: Phaser.GameObjects.Image[] = [];
+  /** 제빌: 상자·조각 (id별 이미지), 휘두르는 낫, 심판의 낫, 심판 섬광 */
+  private jvBoxes = new IdImages();
+  private jvShards = new IdImages();
+  private scythe!: Phaser.GameObjects.Image;
+  private bigScythe!: Phaser.GameObjects.Image;
+  private whiteout!: Phaser.GameObjects.Rectangle;
   private debugGfx: Phaser.GameObjects.Graphics | null = null;
   private playerAnim = '';
   private hitFlashUntil = 0;
@@ -98,6 +140,11 @@ export class WorldRenderer {
       .setStroke('#1a1a2e', 8)
       .setDepth(25)
       .setVisible(false);
+    this.jvBoxes.init(scene, 'fx_jevil_box', 26);
+    this.jvShards.init(scene, 'fx_jevil_shard', 27);
+    this.scythe = scene.add.image(0, 0, 'fx_jevil_scythe').setOrigin(0, 0.5).setDepth(22).setVisible(false);
+    this.bigScythe = scene.add.image(W / 2, 0, 'fx_jevil_bigscythe').setDepth(36).setVisible(false);
+    this.whiteout = scene.add.rectangle(0, 0, W, H, 0xffffff, 0).setOrigin(0).setDepth(45);
     if (debug) this.debugGfx = scene.add.graphics().setDepth(50);
   }
 
@@ -161,6 +208,7 @@ export class WorldRenderer {
     this.syncPlayer(s, py);
     this.syncBox(s, cam);
     this.syncDrops(s, cam);
+    this.syncJevil(s, cam);
     if (this.debugGfx) this.drawDebug(s, cam);
   }
 
@@ -169,7 +217,7 @@ export class WorldRenderer {
     // 피격 그림은 실제로 맞은 직후 20틱만 (무적이 길어져도 계속 빨갛게 보이지 않는다)
     const hitRecently = s.tick < this.hitFlashUntil && s.effects.giant === 0 && s.effects.boost === 0;
     let pose = 'run';
-    if (p.state === 'jump' || p.state === 'doubleJump' || p.state === 'fall') pose = 'jump';
+    if (p.state === 'jump' || p.state === 'doubleJump' || p.state === 'fall' || p.state === 'fly') pose = 'jump';
     else if (p.state === 'slide') pose = 'slide';
     if (hitRecently || p.state === 'dead') pose = 'hit';
     const key = this.spriteKey(pose);
@@ -182,7 +230,31 @@ export class WorldRenderer {
     this.player.setPosition(footX, y);
     this.player.setScale(s.effects.giant > 0 ? cfg.hitbox.giantScale : 1);
     this.player.setVisible(p.invulnTicks === 0 || Math.floor(p.invulnTicks / 8) % 2 === 0);
-    this.player.setTint(s.effects.boost > 0 ? 0x9ff3ff : 0xffffff);
+    const flying = p.state === 'fly';
+    // 비행 중에는 올라가면 머리를 들고 내려가면 숙인다. 제빌 대능력 중에는 보라빛
+    this.player.setAngle(flying ? Math.max(-25, Math.min(25, p.vy / 25)) : 0);
+    this.player.setTint(s.effects.boost > 0 ? 0x9ff3ff : s.jevil && s.jevil.phase > 0 ? 0xe0b3ff : 0xffffff);
+  }
+
+  /** 제빌: 시뮬레이션 상태를 그대로 그린다 */
+  private syncJevil(s: SimState, cam: number): void {
+    const j = s.jevil;
+    this.jvBoxes.sync(
+      (j?.boxes ?? []).map((b) => {
+        const pos = jevilBoxPos(b);
+        return { id: b.id, x: pos.x, y: pos.y, angle: b.t * 15 };
+      }),
+    );
+    this.jvShards.sync((j?.shards ?? []).map((x) => ({ id: x.id, x: x.x - cam, y: x.y, angle: x.life * 30, alpha: Math.min(1, x.life / 10) })));
+    const sb = scytheBox(s);
+    this.scythe.setVisible(!!sb);
+    if (sb && j) {
+      const k = 1 - j.swing / cfg.skills.jevil.scythe.swingTicks; // 0 → 1
+      this.scythe.setPosition(sb.x - cam, sb.y - sb.h / 2).setAngle(-70 + 140 * k);
+    }
+    const by = bigScytheY(s);
+    this.bigScythe.setVisible(by !== null);
+    if (by !== null) this.bigScythe.setY(by);
   }
 
   /** 선택한 캐릭터 전용 스프라이트(<id>_<포즈>)가 있으면 그것, 없으면 공용 player_<포즈> */
@@ -288,6 +360,22 @@ export class WorldRenderer {
         this.shockwave(0xffd23f, ev.x - cam, ev.y);
         break;
       }
+      case 'jevilBurst':
+        this.shockwave(0xe04ecf, ev.x - cam, ev.y);
+        this.scene.cameras.main.shake(90, 0.005);
+        break;
+      case 'jevilPhase':
+        if (ev.phase === 1) {
+          this.flash.setFillStyle(0xa66cff, 0.45);
+          this.scene.tweens.add({ targets: this.flash, fillAlpha: 0, duration: 400 });
+        }
+        break;
+      case 'jevilJudgement':
+        // 섬광이 화면을 덮는다
+        this.whiteout.setFillStyle(0xffffff, 1);
+        this.scene.tweens.add({ targets: this.whiteout, fillAlpha: 0, delay: 120, duration: 700 });
+        this.scene.cameras.main.shake(300, 0.015);
+        break;
       case 'dropCollect':
         this.burst('coin', ev.x - cam, ev.y, 'up');
         break;

@@ -53,11 +53,18 @@ describe('캐릭터 뽑기', () => {
     const s = new SaveStore(mem());
     s.addCoins(1000);
     const before = s.data.coins;
-    const out = pullCharacters(s, 1, 'normal', seq(0.99)); // 레전드 구간
+    const out = pullCharacters(s, 1, 'normal', seq(0.99, 0.0)); // 레전드 구간, 첫 번째 레전드
     expect(out.ok && out.results[0]).toMatchObject({ id: 'chaosking', isNew: true, refund: 0 });
     expect(s.data.coins).toBe(before - ECONOMY.charPullCost);
     expect(s.ownsCharacter('chaosking')).toBe(true);
   });
+  it('픽업 뽑기에서 레전드가 나오면 언제나 픽업 캐릭터', () => {
+    const s = new SaveStore(mem());
+    s.addCoins(1000);
+    const out = pullCharacters(s, 1, 'pickup', seq(0.99, 0.99));
+    expect(out.ok && out.results[0].id).toBe(ECONOMY.pickupCharacter);
+  });
+
   it('중복이면 코인을 돌려받는다', () => {
     const s = new SaveStore(mem());
     s.addCoins(1000);

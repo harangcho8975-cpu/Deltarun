@@ -143,8 +143,34 @@ export class UIScene extends Phaser.Scene {
     const k = s.skill;
     this.skillLabel.setVisible(!!k);
     this.skillBar.clear();
-    if (k) {
-      const c = cfg.skills[k.id];
+    if (k && s.jevil) {
+      const j = s.jevil;
+      const J = cfg.skills.jevil;
+      const PH: Record<number, [string, number]> = {
+        1: ['대능력: 상자 폭격', J.boxPhaseTicks],
+        2: ['대능력: 돌진', J.dashTicks],
+        3: ['비행: 누르면 상승 · 슬라이드로 낫', J.flightTicks],
+        4: ['대능력: 심판의 낫', J.judgementTicks],
+      };
+      let fill: number;
+      let color: number;
+      if (j.phase > 0) {
+        const [name, total] = PH[j.phase];
+        this.skillLabel.setText(`${name}  ${sec(total - j.elapsed)}초  ·  무적`);
+        fill = 1 - j.elapsed / total;
+        color = 0xa66cff;
+      } else {
+        this.skillLabel.setText(`상자 ×${j.stacks} (공중에서 슬라이드)  ·  대능력까지 ${sec(j.timer)}초`);
+        fill = 1 - j.timer / J.ultimateIntervalTicks;
+        color = COLORS.accent;
+      }
+      this.skillBar
+        .fillStyle(0x1a1a2e, 0.45)
+        .fillRoundedRect(40, 150, 400, 12, 6)
+        .fillStyle(color, 1)
+        .fillRoundedRect(40, 150, Math.max(12, 400 * fill), 12, 6);
+    } else if (k) {
+      const c = cfg.skills.chaosKing;
       let fill: number;
       let color: number;
       if (k.ultimateTicks > 0) {

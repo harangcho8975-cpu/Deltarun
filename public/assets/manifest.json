@@ -1,281 +1,321 @@
 [
-  {
-    "key": "player_run",
-    "type": "spritesheet",
-    "path": null,
-    "width": 128,
-    "height": 128,
-    "frames": 6,
-    "frameRate": 12,
-    "placeholderColor": "#f5a623"
-  },
-  {
-    "key": "player_jump",
-    "type": "spritesheet",
-    "path": null,
-    "width": 128,
-    "height": 128,
-    "frames": 2,
-    "frameRate": 8,
-    "placeholderColor": "#f5a623"
-  },
-  {
-    "key": "player_slide",
-    "type": "spritesheet",
-    "path": null,
-    "width": 128,
-    "height": 64,
-    "frames": 2,
-    "frameRate": 10,
-    "placeholderColor": "#f5a623"
-  },
-  {
-    "key": "player_hit",
-    "type": "image",
-    "path": null,
-    "width": 128,
-    "height": 128,
-    "placeholderColor": "#e74c3c"
-  },
-  {
-    "key": "obstacle_low",
-    "type": "image",
-    "path": null,
-    "width": 64,
-    "height": 64,
-    "placeholderColor": "#7f8c8d"
-  },
-  {
-    "key": "obstacle_high",
-    "type": "image",
-    "path": null,
-    "width": 64,
-    "height": 160,
-    "placeholderColor": "#7f8c8d"
-  },
-  {
-    "key": "obstacle_air",
-    "type": "image",
-    "path": null,
-    "width": 96,
-    "height": 400,
-    "placeholderColor": "#4a5560"
-  },
-  {
-    "key": "jelly_normal",
-    "type": "image",
-    "path": null,
-    "width": 32,
-    "height": 32,
-    "placeholderColor": "#ff6fae"
-  },
-  {
-    "key": "jelly_big",
-    "type": "image",
-    "path": null,
-    "width": 64,
-    "height": 64,
-    "placeholderColor": "#ff3d8b"
-  },
-  {
-    "key": "coin",
-    "type": "image",
-    "path": null,
-    "width": 32,
-    "height": 32,
-    "placeholderColor": "#ffd23f"
-  },
-  {
-    "key": "item_heal",
-    "type": "image",
-    "path": null,
-    "width": 64,
-    "height": 64,
-    "placeholderColor": "#2ecc71"
-  },
-  {
-    "key": "item_magnet",
-    "type": "image",
-    "path": null,
-    "width": 64,
-    "height": 64,
-    "placeholderColor": "#3498db"
-  },
-  {
-    "key": "item_giant",
-    "type": "image",
-    "path": null,
-    "width": 64,
-    "height": 64,
-    "placeholderColor": "#9b59b6"
-  },
-  {
-    "key": "item_boost",
-    "type": "image",
-    "path": null,
-    "width": 64,
-    "height": 64,
-    "placeholderColor": "#5dd6f5"
-  },
-  {
-    "key": "ground_tile",
-    "type": "image",
-    "path": null,
-    "width": 64,
-    "height": 64,
-    "placeholderColor": "#8b5a2b"
-  },
-  {
-    "key": "bg_far",
-    "type": "image",
-    "path": null,
-    "width": 1280,
-    "height": 720,
-    "placeholderColor": "#9fd8ef"
-  },
-  {
-    "key": "bg_mid",
-    "type": "image",
-    "path": null,
-    "width": 1280,
-    "height": 720,
-    "placeholderColor": "#6aa77a",
-    "placeholderFill": 0.42
-  },
-  {
-    "key": "bg_near",
-    "type": "image",
-    "path": null,
-    "width": 1280,
-    "height": 720,
-    "placeholderColor": "#3f7350",
-    "placeholderFill": 0.2
-  },
-  {
-    "key": "ui_btn_jump",
-    "type": "image",
-    "path": null,
-    "width": 160,
-    "height": 160,
-    "placeholderColor": "#ffffff66"
-  },
-  {
-    "key": "ui_btn_slide",
-    "type": "image",
-    "path": null,
-    "width": 160,
-    "height": 160,
-    "placeholderColor": "#ffffff66"
-  },
-  {
-    "key": "ui_hp_bar",
-    "type": "image",
-    "path": null,
-    "width": 400,
-    "height": 32,
-    "placeholderColor": "#ffffff66"
-  },
-  {
-    "key": "sfx_jump",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "sfx_jelly",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "sfx_coin",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "sfx_item",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "sfx_hit",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "sfx_smash",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "sfx_clear",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "sfx_fail",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "bgm_stage1",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "bgm_stage2",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "bgm_stage3",
-    "type": "audio",
-    "path": null
-  },
-  {
-    "key": "char_orange",
-    "type": "image",
-    "path": null,
-    "width": 360,
-    "height": 480,
-    "placeholderColor": "#f5a623"
-  },
-  {
-    "key": "char_blueberry",
-    "type": "image",
-    "path": null,
-    "width": 360,
-    "height": 480,
-    "placeholderColor": "#5b7bd5"
-  },
-  {
-    "key": "char_mint",
-    "type": "image",
-    "path": null,
-    "width": 360,
-    "height": 480,
-    "placeholderColor": "#3ddc97"
-  },
-  {
-    "key": "char_frisk",
-    "type": "image",
-    "path": null,
-    "width": 360,
-    "height": 480,
-    "placeholderColor": "#6c7a89"
-  },
-  {
-    "key": "char_chaosking",
-    "type": "image",
-    "path": null,
-    "width": 360,
-    "height": 480,
-    "placeholderColor": "#7b2cbf"
-  },
-  {
-    "key": "fx_chaos_box",
-    "type": "image",
-    "path": null,
-    "width": 480,
-    "height": 260,
-    "placeholderColor": "#7b2cbfcc"
-  }
+ {
+  "key": "player_run",
+  "type": "spritesheet",
+  "path": null,
+  "width": 128,
+  "height": 128,
+  "frames": 6,
+  "frameRate": 12,
+  "placeholderColor": "#f5a623"
+ },
+ {
+  "key": "player_jump",
+  "type": "spritesheet",
+  "path": null,
+  "width": 128,
+  "height": 128,
+  "frames": 2,
+  "frameRate": 8,
+  "placeholderColor": "#f5a623"
+ },
+ {
+  "key": "player_slide",
+  "type": "spritesheet",
+  "path": null,
+  "width": 128,
+  "height": 64,
+  "frames": 2,
+  "frameRate": 10,
+  "placeholderColor": "#f5a623"
+ },
+ {
+  "key": "player_hit",
+  "type": "image",
+  "path": null,
+  "width": 128,
+  "height": 128,
+  "placeholderColor": "#e74c3c"
+ },
+ {
+  "key": "obstacle_low",
+  "type": "image",
+  "path": null,
+  "width": 64,
+  "height": 64,
+  "placeholderColor": "#7f8c8d"
+ },
+ {
+  "key": "obstacle_high",
+  "type": "image",
+  "path": null,
+  "width": 64,
+  "height": 160,
+  "placeholderColor": "#7f8c8d"
+ },
+ {
+  "key": "obstacle_air",
+  "type": "image",
+  "path": null,
+  "width": 96,
+  "height": 400,
+  "placeholderColor": "#4a5560"
+ },
+ {
+  "key": "jelly_normal",
+  "type": "image",
+  "path": null,
+  "width": 32,
+  "height": 32,
+  "placeholderColor": "#ff6fae"
+ },
+ {
+  "key": "jelly_big",
+  "type": "image",
+  "path": null,
+  "width": 64,
+  "height": 64,
+  "placeholderColor": "#ff3d8b"
+ },
+ {
+  "key": "coin",
+  "type": "image",
+  "path": null,
+  "width": 32,
+  "height": 32,
+  "placeholderColor": "#ffd23f"
+ },
+ {
+  "key": "item_heal",
+  "type": "image",
+  "path": null,
+  "width": 64,
+  "height": 64,
+  "placeholderColor": "#2ecc71"
+ },
+ {
+  "key": "item_magnet",
+  "type": "image",
+  "path": null,
+  "width": 64,
+  "height": 64,
+  "placeholderColor": "#3498db"
+ },
+ {
+  "key": "item_giant",
+  "type": "image",
+  "path": null,
+  "width": 64,
+  "height": 64,
+  "placeholderColor": "#9b59b6"
+ },
+ {
+  "key": "item_boost",
+  "type": "image",
+  "path": null,
+  "width": 64,
+  "height": 64,
+  "placeholderColor": "#5dd6f5"
+ },
+ {
+  "key": "ground_tile",
+  "type": "image",
+  "path": null,
+  "width": 64,
+  "height": 64,
+  "placeholderColor": "#8b5a2b"
+ },
+ {
+  "key": "bg_far",
+  "type": "image",
+  "path": null,
+  "width": 1280,
+  "height": 720,
+  "placeholderColor": "#9fd8ef"
+ },
+ {
+  "key": "bg_mid",
+  "type": "image",
+  "path": null,
+  "width": 1280,
+  "height": 720,
+  "placeholderColor": "#6aa77a",
+  "placeholderFill": 0.42
+ },
+ {
+  "key": "bg_near",
+  "type": "image",
+  "path": null,
+  "width": 1280,
+  "height": 720,
+  "placeholderColor": "#3f7350",
+  "placeholderFill": 0.2
+ },
+ {
+  "key": "ui_btn_jump",
+  "type": "image",
+  "path": null,
+  "width": 160,
+  "height": 160,
+  "placeholderColor": "#ffffff66"
+ },
+ {
+  "key": "ui_btn_slide",
+  "type": "image",
+  "path": null,
+  "width": 160,
+  "height": 160,
+  "placeholderColor": "#ffffff66"
+ },
+ {
+  "key": "ui_hp_bar",
+  "type": "image",
+  "path": null,
+  "width": 400,
+  "height": 32,
+  "placeholderColor": "#ffffff66"
+ },
+ {
+  "key": "sfx_jump",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "sfx_jelly",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "sfx_coin",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "sfx_item",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "sfx_hit",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "sfx_smash",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "sfx_clear",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "sfx_fail",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "bgm_stage1",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "bgm_stage2",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "bgm_stage3",
+  "type": "audio",
+  "path": null
+ },
+ {
+  "key": "char_orange",
+  "type": "image",
+  "path": null,
+  "width": 360,
+  "height": 480,
+  "placeholderColor": "#f5a623"
+ },
+ {
+  "key": "char_blueberry",
+  "type": "image",
+  "path": null,
+  "width": 360,
+  "height": 480,
+  "placeholderColor": "#5b7bd5"
+ },
+ {
+  "key": "char_mint",
+  "type": "image",
+  "path": null,
+  "width": 360,
+  "height": 480,
+  "placeholderColor": "#3ddc97"
+ },
+ {
+  "key": "char_frisk",
+  "type": "image",
+  "path": null,
+  "width": 360,
+  "height": 480,
+  "placeholderColor": "#6c7a89"
+ },
+ {
+  "key": "char_chaosking",
+  "type": "image",
+  "path": null,
+  "width": 360,
+  "height": 480,
+  "placeholderColor": "#7b2cbf"
+ },
+ {
+  "key": "fx_chaos_box",
+  "type": "image",
+  "path": null,
+  "width": 480,
+  "height": 260,
+  "placeholderColor": "#7b2cbfcc"
+ },
+ {
+  "key": "char_jevil",
+  "type": "image",
+  "path": null,
+  "width": 360,
+  "height": 480,
+  "placeholderColor": "#4b2c8f"
+ },
+ {
+  "key": "fx_jevil_box",
+  "type": "image",
+  "path": null,
+  "width": 72,
+  "height": 72,
+  "placeholderColor": "#e04ecf"
+ },
+ {
+  "key": "fx_jevil_shard",
+  "type": "image",
+  "path": null,
+  "width": 28,
+  "height": 28,
+  "placeholderColor": "#ffd23f"
+ },
+ {
+  "key": "fx_jevil_scythe",
+  "type": "image",
+  "path": null,
+  "width": 260,
+  "height": 280,
+  "placeholderColor": "#c9d1e6cc"
+ },
+ {
+  "key": "fx_jevil_bigscythe",
+  "type": "image",
+  "path": null,
+  "width": 720,
+  "height": 560,
+  "placeholderColor": "#8a90a8dd"
+ }
 ]

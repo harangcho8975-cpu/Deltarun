@@ -20,7 +20,12 @@ export function pullCharacters(store: SaveStore, count: 1 | 10, banner: Banner =
   if (store.data.coins < cost) return { ok: false, reason: 'coins', need: cost };
 
   const rates = ratesFor(banner);
-  const rolled = Array.from({ length: count }, () => rollCharacter(rng, rollRarity(rng, rates)));
+  const roll = () => {
+    const r = rollRarity(rng, rates);
+    if (banner === 'pickup' && r === 'legendary') return characters.find((c) => c.id === ECONOMY.pickupCharacter)!;
+    return rollCharacter(rng, r);
+  };
+  const rolled = Array.from({ length: count }, roll);
   const min = ORDER.indexOf(ECONOMY.pull10MinRarity);
   if (count === 10 && !rolled.some((c) => ORDER.indexOf(c.rarity) >= min)) {
     rolled[rolled.length - 1] = rollCharacter(rng, ECONOMY.pull10MinRarity);

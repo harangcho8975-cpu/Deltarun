@@ -82,6 +82,50 @@ export const gameConfig = {
         periodTicks: 120, // 한 번 오르내리는 데 걸리는 시간 (2초)
       },
     },
+    // 제빌
+    //  - 소능력: 상자 스택. 시작할 때와 대능력이 끝날 때마다 2개씩 쌓인다.
+    //    공중(땅에 닿지 않은 상태)에서 슬라이드를 누르면 스택 1개로 상자가 화면 왼쪽 위에서 사선으로 날아와 터지고,
+    //    사방으로 퍼진 조각이 닿는 장애물을 부순다.
+    //  - 대능력: 20초마다. 발동 중 무적, 구멍 위도 바닥으로 본다.
+    //    상자 폭격(3초, 상자 5개) → 돌진(2초, 앞으로 날아감) → 비행(7초, 누르면 상승·떼면 하강, 슬라이드로 낫)
+    //    → 심판의 낫(3초, 거대한 낫이 천천히 떨어지다 화면 절반에서 섬광과 함께 화면 안 장애물을 모두 부숨)
+    jevil: {
+      startStacks: 2,
+      stacksPerUltimate: 2,
+      ultimateIntervalTicks: 1200, // 20초
+      box: {
+        size: 72,
+        flightTicks: 24, // 왼쪽 위에서 터지는 곳까지 날아오는 시간
+        startScreenX: -80, // 출발점 (화면 좌표, 왼쪽 위 바깥)
+        startY: -80,
+        minorAhead: 340, // 소능력 상자가 터지는 곳: 플레이어보다 이만큼 앞
+        minorAbove: 90, // 플레이어 발보다 이만큼 위
+      },
+      shard: { count: 12, speed: 900, lifeTicks: 30, size: 28 },
+      boxPhaseTicks: 180, // 상자 폭격 3초
+      boxEveryTicks: 36, // 상자 5개를 이 간격으로
+      // 대능력 상자 5개가 터지는 곳 (화면 좌표)
+      boxTargets: [
+        [560, 330],
+        [860, 480],
+        [1040, 300],
+        [720, 520],
+        [960, 380],
+      ] as [number, number][],
+      dashTicks: 120, // 돌진 2초
+      dashSpeedMul: 2, // 돌진 중 스크롤 속도 배율
+      flyY: 400, // 돌진하며 올라가는 높이 (발 y)
+      dashRisePerTick: 10,
+      flightTicks: 420, // 비행 7초
+      flightUpAccel: 3800, // 누르고 있으면 위로 (px/s²)
+      flightGravity: 3200, // 떼면 아래로
+      flightMaxVy: 720,
+      ceilingY: 150, // 비행 중 발 y의 최소값 (화면 위로 나가지 않게)
+      scythe: { swingTicks: 18, reach: 260, height: 280 },
+      judgementTicks: 180, // 심판의 낫 3초
+      bigScythe: { startY: -360, endY: 560, flashAtY: 360 }, // 낫 중심 y. 화면 절반(360)을 지날 때 섬광
+      afterUltimateTicks: 60, // 끝난 뒤 1초 동안 무적 + 구멍 위 바닥
+    },
   },
 
   activeBehind: 128,
@@ -95,7 +139,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 11;
+export const SIM_VERSION = 12;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {

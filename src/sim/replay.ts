@@ -5,7 +5,7 @@ import { step } from './step';
 import type { Modifiers } from './modifiers';
 import type { InputFrame, SimState, SkillId } from './types';
 
-export type ReplayAction = 'J' | 'S+' | 'S-';
+export type ReplayAction = 'J' | 'S+' | 'S-' | 'H+' | 'H-';
 
 export interface Replay {
   stageId: string;
@@ -21,6 +21,7 @@ export interface Replay {
 export class ReplayRecorder {
   private inputs: [number, ReplayAction][] = [];
   private slide = false;
+  private held = false;
 
   constructor(private stageId: string, private skill?: SkillId | null, private mods?: Partial<Modifiers>) {}
 
@@ -29,6 +30,11 @@ export class ReplayRecorder {
     if (input.slideHeld !== this.slide) {
       this.slide = input.slideHeld;
       this.inputs.push([tick, input.slideHeld ? 'S+' : 'S-']);
+    }
+    const held = !!input.jumpHeld;
+    if (held !== this.held) {
+      this.held = held;
+      this.inputs.push([tick, held ? 'H+' : 'H-']);
     }
   }
 
@@ -44,6 +50,7 @@ export class ReplayRecorder {
 export class ReplayPlayer {
   private i = 0;
   private slide = false;
+  private held = false;
 
   constructor(private replay: Replay) {}
 
@@ -53,10 +60,11 @@ export class ReplayPlayer {
     while (this.i < ins.length && ins[this.i][0] === tick) {
       const a = ins[this.i][1];
       if (a === 'J') jump = true;
+      else if (a === 'H+' || a === 'H-') this.held = a === 'H+';
       else this.slide = a === 'S+';
       this.i++;
     }
-    return { jumpPressed: jump, slideHeld: this.slide };
+    return { jumpPressed: jump, slideHeld: this.slide, jumpHeld: this.held };
   }
 }
 
@@ -86,6 +94,11 @@ export function hashState(s: SimState): string {
   ];
   if (s.skill) parts.push(s.skill.timer, s.skill.count, s.skill.ultimateTicks, s.skill.ultimateElapsed, s.skill.boxCoins);
   if (s.drops.length) parts.push(s.drops.map((d) => `${d.id}:${d.x.toFixed(3)}:${d.y.toFixed(3)}:${d.delay}:${d.age}:${d.settled ? 1 : 0}`).join(','));
+  const j = s.jevil;
+  if (j) {
+    parts.push(j.stacks, j.timer, j.phase, j.elapsed, j.swing, j.judged ? 1 : 0, j.boxes.map((b) => `${b.id}:${b.t}`).join(','));
+    parts.push(j.shards.map((x) => `${x.id}:${x.x.toFixed(3)}:${x.y.toFixed(3)}:${x.life}`).join(','));
+  }
   let alive = '';
   for (const e of s.entities) alive += e.alive ? '1' : '0';
   return fnv1a(parts.join('|') + '|' + alive);

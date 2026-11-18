@@ -90,6 +90,30 @@ export const characters: CharacterInfo[] = [
     ],
     story: '왕관 하나 쓰고 나타나 길 위의 모든 것을 부수며 달리는 러너. 부순 만큼 주머니가 두둑해진다.',
   },
+  {
+    id: 'jevil',
+    name: '제빌',
+    tagline: '상자와 낫으로 길을 뒤엎는 광대',
+    rarity: 'legendary',
+    skillId: 'jevil',
+    abilities: [
+      {
+        kind: 'minor',
+        name: '깜짝 상자',
+        description:
+          '시작할 때와 대능력이 끝날 때마다 상자 스택이 2개 쌓인다. 땅에 닿지 않은 상태에서 슬라이드를 누르면 스택 1개를 써서 왼쪽 위에서 상자가 사선으로 날아와 터지고, 사방으로 퍼진 조각이 장애물을 부순다.',
+        active: true,
+      },
+      {
+        kind: 'ultimate',
+        name: '혼돈의 비행',
+        description:
+          '20초마다 발동, 발동 중 무적. 3초 동안 상자 5개가 날아와 터지고, 2초 동안 앞으로 날아간 뒤 7초 동안 비행한다(누르면 상승, 떼면 하강, 슬라이드로 낫 휘두르기). 비행이 끝나면 거대한 낫이 3초 동안 천천히 떨어지다 화면 절반에서 섬광과 함께 화면 안의 장애물을 모두 부순다.',
+        active: true,
+      },
+    ],
+    story: '상자 속에서 튀어나와 낫을 휘두르며 하늘을 나는 광대. 어디로 튈지 아무도 모른다.',
+  },
 ];
 
 export const DEFAULT_CHARACTER = characters[0].id;

@@ -15,6 +15,9 @@ export class InputController {
   private jumpLatched = false;
   private slidePointers = new Set<number>();
   private slideKeys = new Set<string>();
+  /** 누르고 있는 점프 입력 (제빌 비행용) */
+  private jumpPointers = new Set<number>();
+  private jumpKeys = new Set<string>();
   /** UI 버튼 반응용: 마지막 점프 입력 시각(ms) */
   lastJumpAt = -1e9;
   enabled = true;
@@ -37,23 +40,28 @@ export class InputController {
     if (!this.enabled) return;
     const a = PAUSE_AREA;
     if (p.x >= a.x && p.y <= a.y + a.h) return;
-    if (p.x < this.scene.scale.width / 2) this.pressJump();
-    else this.slidePointers.add(p.id);
+    if (p.x < this.scene.scale.width / 2) {
+      this.pressJump();
+      this.jumpPointers.add(p.id);
+    } else this.slidePointers.add(p.id);
   }
 
   private onUp(p: Phaser.Input.Pointer): void {
     this.slidePointers.delete(p.id);
+    this.jumpPointers.delete(p.id);
   }
 
   private onKeyDown(ev: KeyboardEvent): void {
     if (!this.enabled) return;
     if (JUMP_KEYS.has(ev.code)) {
       if (!ev.repeat) this.pressJump();
+      this.jumpKeys.add(ev.code);
     } else if (SLIDE_KEYS.has(ev.code)) this.slideKeys.add(ev.code);
   }
 
   private onKeyUp(ev: KeyboardEvent): void {
     this.slideKeys.delete(ev.code);
+    this.jumpKeys.delete(ev.code);
   }
 
   private pressJump(): void {
@@ -65,6 +73,8 @@ export class InputController {
     this.jumpLatched = false;
     this.slidePointers.clear();
     this.slideKeys.clear();
+    this.jumpPointers.clear();
+    this.jumpKeys.clear();
   };
 
   get slideHeld(): boolean {
@@ -72,7 +82,7 @@ export class InputController {
   }
 
   consumeFrame(): InputFrame {
-    const f = { jumpPressed: this.jumpLatched, slideHeld: this.slideHeld };
+    const f = { jumpPressed: this.jumpLatched, slideHeld: this.slideHeld, jumpHeld: this.jumpPointers.size > 0 || this.jumpKeys.size > 0 };
     this.jumpLatched = false;
     return f;
   }

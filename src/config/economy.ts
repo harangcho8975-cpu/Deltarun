@@ -23,6 +23,8 @@ export const ECONOMY = {
   charRates: { common: 0.5, rare: 0.3, epic: 0.17, legendary: 0.03 } as Record<Rarity, number>,
   /** 픽업(이벤트) 뽑기: 레전드 확률이 올라간다 */
   charPickupRates: { common: 0.44, rare: 0.28, epic: 0.2, legendary: 0.08 } as Record<Rarity, number>,
+  /** 픽업 뽑기에서 레전드가 나오면 이 캐릭터 */
+  pickupCharacter: 'chaosking',
   charDuplicateRefund: { common: 30, rare: 80, epic: 200, legendary: 500 } as Record<Rarity, number>,
   /** 처음부터 가지고 있는 캐릭터 */
   startCharacters: ['orange', 'frisk'],

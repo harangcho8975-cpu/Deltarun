@@ -1,5 +1,6 @@
 import { gameConfig as cfg, TICK_RATE } from '../config/gameConfig';
 import { hasFloorUnder } from './collision';
+import { updateFlight } from './jevil';
 import type { InputFrame, SimEvent, SimState } from './types';
 
 const isGrounded = (st: string) => st === 'run' || st === 'slide';
@@ -8,6 +9,7 @@ const isGrounded = (st: string) => st === 'run' || st === 'slide';
 export function updateJumpBuffer(s: SimState, input: InputFrame): void {
   const p = s.player;
   p.slideHeld = input.slideHeld;
+  p.jumpHeld = !!input.jumpHeld;
   if (input.jumpPressed) p.jumpBufferTicks = cfg.jumpBufferTicks + s.mods.bufferBonus;
   else if (p.jumpBufferTicks > 0) p.jumpBufferTicks--;
 }
@@ -26,6 +28,13 @@ function startJump(s: SimState, events: SimEvent[], double: boolean): void {
 export function updatePlayer(s: SimState, events: SimEvent[]): number {
   const p = s.player;
   const prevY = p.y;
+
+  if (p.state === 'fly') {
+    // 제빌 돌진·비행: 중력 대신 비행 규칙 (점프 입력은 버린다)
+    p.jumpBufferTicks = 0;
+    updateFlight(s);
+    return prevY;
+  }
 
   if (isGrounded(p.state)) {
     if (p.jumpBufferTicks > 0) {
@@ -56,6 +65,7 @@ export function updatePlayer(s: SimState, events: SimEvent[]): number {
 /** 4장 6번: 착지 / 구멍 낙하 / 추락 사망 */
 export function updateGround(s: SimState, prevY: number, events: SimEvent[]): void {
   const p = s.player;
+  if (p.state === 'fly') return; // 비행 중에는 착지·낙하가 없다
   const floor = hasFloorUnder(s);
 
   if (isGrounded(p.state)) {

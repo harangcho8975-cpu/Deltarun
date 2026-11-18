@@ -26,8 +26,25 @@ export interface RunResultData {
   jellies: string;
 }
 
+/** 테스트용 긴 평지 (구멍 없음, 낮은 장애물 800px마다): 스킬을 오래 지켜볼 때 ?stage=stage_flat */
+const flatStage: StageData = {
+  id: 'stage_flat',
+  name: '테스트 평지',
+  length: 40000,
+  speed: 620,
+  bgm: 'bgm_stage1',
+  background: ['bg_far', 'bg_mid', 'bg_near'],
+  ground: [[0, 40000]],
+  obstacles: Array.from({ length: 46 }, (_, i) => ({ type: 'obstacle_low' as const, x: 2000 + i * 800 })),
+  jellies: [],
+  items: [],
+  goalX: 39800,
+  stars: [0.5, 0.75, 0.95],
+};
+
 export function stageById(id: string): StageData | undefined {
   if (id === 'stage_test') return testStage as StageData;
+  if (id === 'stage_flat') return flatStage;
   return stages[id];
 }
 
@@ -77,6 +94,7 @@ export class GameScene extends Phaser.Scene {
     this.prev = { cameraX: this.sim.cameraX, playerY: this.sim.player.y };
     this.recorder = new ReplayRecorder(stage.id, ch.skillId, equipped.length ? mods : undefined);
     if (params.god) this.sim.debugInvincible = true;
+    if (this.sim.jevil && params.ult !== undefined && params.ult >= 0) this.sim.jevil.timer = Math.max(1, Math.round(params.ult * 60));
     this.controls = new InputController(this);
     this.world = new WorldRenderer(this, stage, params.debug);
     if (params.debug) this.debug = new DebugOverlay(this);
@@ -184,6 +202,26 @@ export class GameScene extends Phaser.Scene {
           break;
         case 'ultimateEnd':
           Sound.play(this, 'sfx_coin');
+          break;
+        case 'jevilBox':
+          if (!ev.ultimate) this.events.emit('popup', '깜짝 상자!');
+          break;
+        case 'jevilBurst':
+          Sound.play(this, 'sfx_smash', 0.5);
+          break;
+        case 'jevilPhase': {
+          const label: Record<number, string> = { 1: '혼돈의 비행!', 2: '돌진!', 3: '비행! 누르면 상승', 4: '심판의 낫' };
+          if (label[ev.phase]) {
+            Sound.play(this, 'sfx_item');
+            this.events.emit('popup', label[ev.phase]);
+          }
+          break;
+        }
+        case 'jevilSwing':
+          Sound.play(this, 'sfx_jump', 0.4);
+          break;
+        case 'jevilJudgement':
+          Sound.play(this, 'sfx_clear');
           break;
         case 'dropCollect':
           Sound.play(this, 'sfx_coin', 0.3);
