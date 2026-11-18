@@ -41,6 +41,12 @@ npm run replays    # 봇으로 스테이지별 클리어 리플레이 재녹화
 - 수치는 `src/config/gameConfig.ts`의 `skills.jevil`, 동작은 `src/sim/jevil.ts`.
 - 테스트용: `?char=jevil&stage=stage_03&god=1&ult=2` (대능력을 2초 뒤에 시작), `?stage=stage_flat` (긴 평지).
 
+## 클라우드 저장 (Firebase)
+- 접속하면 게스트로 자동 로그인하고, 저장이 바뀔 때마다 Firestore `users/{uid}`에 올립니다. 서버·기기 중 더 최근 저장이 이깁니다. 로비 `계정`에서 상태를 봅니다.
+- 설정: `src/online/firebaseConfig.ts` (공개 값). 서버 호출은 REST 직접 호출(`src/online/restBackend.ts`)이라 추가 패키지가 없습니다.
+- Firebase 콘솔에서 해둘 것: Authentication → 로그인 방법 `익명` 켜기, Firestore 만들기, `firestore.rules` 내용을 규칙 탭에 붙여 넣기 (또는 `firebase deploy --only firestore:rules`).
+- 끄기/테스트: `?offline=1`, 자동화 브라우저에서는 자동으로 꺼짐(`?cloud=1`로 켬).
+
 ## 조작
 
 | | 점프 (2단 가능) | 슬라이드 (누르는 동안) | 일시정지 |

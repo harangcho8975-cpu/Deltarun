@@ -17,6 +17,8 @@ export interface EquipmentSave {
 
 export interface SaveData {
   version: 1;
+  /** 마지막으로 저장한 시각(ms). 클라우드 동기화에서 어느 쪽이 최신인지 가린다 */
+  updatedAt: number;
   stages: Record<string, StageRecord>;
   coins: number;
   selectedCharacter: string;
@@ -38,6 +40,7 @@ export const SAVE_KEY = 'deltarun.save';
 export function defaultSave(): SaveData {
   return {
     version: 1,
+    updatedAt: 0,
     stages: {},
     coins: ECONOMY.startCoins,
     selectedCharacter: DEFAULT_CHARACTER,
@@ -53,6 +56,7 @@ function sanitize(raw: unknown): SaveData {
   if (!raw || typeof raw !== 'object') return d;
   const r = raw as Partial<SaveData>;
   if (r.version !== 1) return d; // 이후 버전이 생기면 여기서 migrate
+  if (typeof r.updatedAt === 'number' && Number.isFinite(r.updatedAt) && r.updatedAt > 0) d.updatedAt = Math.floor(r.updatedAt);
   if (typeof r.selectedCharacter === 'string' && characters.some((c) => c.id === r.selectedCharacter)) {
     d.selectedCharacter = r.selectedCharacter; // 목록에 없는 값(지워진 캐릭터 등)은 기본값
   }
@@ -134,12 +138,32 @@ export class SaveStore {
     }
   }
 
+  private listeners: (() => void)[] = [];
+
+  /** 저장할 때마다 불린다 (클라우드 동기화용) */
+  onSave(fn: () => void): void {
+    this.listeners.push(fn);
+  }
+
+  /** 서버의 저장으로 통째로 바꾼다 (updatedAt도 서버 값 그대로) */
+  replaceFromCloud(raw: unknown, updatedAt: number): void {
+    this.data = sanitize(raw);
+    this.data.updatedAt = updatedAt;
+    try {
+      this.storage?.setItem(SAVE_KEY, JSON.stringify(this.data));
+    } catch {
+      // 무시
+    }
+  }
+
   save(): void {
+    this.data.updatedAt = Date.now();
     try {
       this.storage?.setItem(SAVE_KEY, JSON.stringify(this.data));
     } catch {
       // 비공개 창·용량 초과 등: 저장만 건너뛴다
     }
+    this.listeners.forEach((f) => f());
   }
 
   record(id: string): StageRecord {

@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 각자 자기 저장 문서(users/{내 uid})만 읽고 쓴다. 형식과 크기도 제한한다.
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['save', 'updatedAt', 'version'])
+        && request.resource.data.save is string
+        && request.resource.data.save.size() < 200000
+        && request.resource.data.updatedAt is int;
+      allow delete: if false;
+    }
+    // 그 밖의 모든 문서는 막는다
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

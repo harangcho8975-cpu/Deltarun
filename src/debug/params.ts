@@ -17,6 +17,10 @@ export const params = {
   equip: q.get('equip') ? q.get('equip')!.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 3) : undefined,
   /** 테스트용: ?ult=2 이면 제빌 대능력이 2초 뒤에 시작한다 (기본 20초) */
   ult: q.has('ult') ? Number(q.get('ult')) : undefined,
+  /** 테스트용: ?offline=1 이면 클라우드 저장을 쓰지 않는다 */
+  offline: q.get('offline') === '1',
+  /** 테스트용: ?cloud=1 이면 자동화 브라우저에서도 클라우드를 켠다 */
+  cloud: q.get('cloud') === '1',
   /** 테스트용: 이 틱에서 시뮬레이션을 멈춘다 */
   freezeAt: q.has('freezeAt') ? Number(q.get('freezeAt')) : undefined,
 };

@@ -387,3 +387,16 @@ test('제빌: 공중 슬라이드로 상자, 대능력 상자 폭격 → 돌진 
   expect((await st()).stacks).toBe(3); // 1 + 2
   expect(errors).toEqual([]);
 });
+
+test('계정 화면: 로비 → 계정, 자동화 브라우저에서는 클라우드가 꺼져 있고 에러가 없다', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  await page.mouse.click(1000, 104); // 계정
+  await expect.poll(() => activeScenes(page)).toContain('Account');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'test-results/account.png' });
+  await page.keyboard.press('Escape');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  expect(errors).toEqual([]);
+});

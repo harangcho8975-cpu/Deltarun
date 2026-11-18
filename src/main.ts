@@ -4,12 +4,14 @@ import { PreloadScene } from './scenes/PreloadScene';
 import { LobbyScene } from './scenes/LobbyScene';
 import { CharacterListScene } from './scenes/CharacterListScene';
 import { CharacterInfoScene } from './scenes/CharacterInfoScene';
+import { AccountScene } from './scenes/AccountScene';
 import { EquipmentScene } from './scenes/EquipmentScene';
 import { EventScene } from './scenes/EventScene';
 import { GachaScene } from './scenes/GachaScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { ResultScene } from './scenes/ResultScene';
+import { startCloud } from './online';
 import { fullscreen } from './ui/fullscreen';
 
 // 논리 해상도는 항상 1280×720. 기기는 비율 그대로 키우거나 줄여서 보여주기만 한다 (휴대폰·PC 같은 화면).
@@ -26,7 +28,7 @@ const game = new Phaser.Game({
   },
   input: { activePointers: 3 },
   render: { preserveDrawingBuffer: true },
-  scene: [BootScene, PreloadScene, LobbyScene, CharacterListScene, CharacterInfoScene, EquipmentScene, GachaScene, EventScene, GameScene, UIScene, ResultScene],
+  scene: [BootScene, PreloadScene, LobbyScene, CharacterListScene, CharacterInfoScene, EquipmentScene, GachaScene, EventScene, AccountScene, GameScene, UIScene, ResultScene],
 });
 
 declare global {
@@ -35,6 +37,7 @@ declare global {
   }
 }
 window.__deltaRun = { game, frozen: false, tick: 0 };
+startCloud();
 
 // 휴대폰(터치)에서는 접속 후 첫 터치 때 자동으로 전체화면 + 가로 전환을 한다.
 // 브라우저는 보안상 사용자가 화면을 한 번 누른 뒤에만 전체화면을 허락하므로, 접속 즉시는 불가능하다.

@@ -120,6 +120,7 @@ export class LobbyScene extends Phaser.Scene {
     };
     toggle(1000, 'bgm');
     toggle(1150, 'sfx');
+    items.push(button(this, 1000, 104, 140, 48, '계정', () => this.scene.start('Account'), 0xdfe6f5, 17));
     if (fullscreen.supported() && !fullscreen.standalone()) {
       items.push(button(this, 1150, 104, 140, 48, '전체화면 (F)', () => void fullscreen.toggle(), 0xdfe6f5, 17));
     }
