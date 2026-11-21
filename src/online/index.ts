@@ -1,7 +1,7 @@
 import { params } from '../debug/params';
 import { saveStore } from '../save/store';
 import { firebaseConfig } from './firebaseConfig';
-import { RestBackend } from './restBackend';
+import { FirebaseBackend } from './firebaseBackend';
 import { CloudSync } from './sync';
 
 /**
@@ -11,7 +11,7 @@ import { CloudSync } from './sync';
 export const cloudEnabled =
   params.cloud || !(params.offline || (typeof navigator !== 'undefined' && navigator.webdriver) || (params.debug && params.coins !== undefined));
 
-export const cloud: CloudSync | null = cloudEnabled ? new CloudSync(saveStore, new RestBackend(firebaseConfig)) : null;
+export const cloud: CloudSync | null = cloudEnabled ? new CloudSync(saveStore, new FirebaseBackend(firebaseConfig)) : null;
 
 /** 접속하면 백그라운드에서 로그인·동기화한다 (실패해도 게임은 계속) */
 export function startCloud(onChange?: () => void): void {

@@ -14,6 +14,7 @@
     "cloud:check": "tsx scripts/cloud-check.mts"
   },
   "dependencies": {
+    "firebase": "^13.4.0",
     "lil-gui": "^0.20.0",
     "phaser": "^3.90.0"
   },

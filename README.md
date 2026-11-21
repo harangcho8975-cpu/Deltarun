@@ -43,8 +43,8 @@ npm run replays    # 봇으로 스테이지별 클리어 리플레이 재녹화
 
 ## 클라우드 저장 (Firebase)
 - 접속하면 게스트로 자동 로그인하고, 저장이 바뀔 때마다 Firestore `users/{uid}`에 올립니다. 서버·기기 중 더 최근 저장이 이깁니다. 로비 `계정`에서 상태를 봅니다.
-- 설정: `src/online/firebaseConfig.ts` (공개 값). 서버 호출은 REST 직접 호출(`src/online/restBackend.ts`)이라 추가 패키지가 없습니다.
-- Firebase 콘솔에서 해둘 것: Authentication → 로그인 방법 `익명` 켜기, Firestore 만들기, `firestore.rules` 내용을 규칙 탭에 붙여 넣기 (또는 `firebase deploy --only firestore:rules`).
+- 설정: `src/online/firebaseConfig.ts` (공개 값). Firebase 공식 SDK(`firebase`)를 쓰고, 처음 필요할 때 내려받습니다(`src/online/firebaseBackend.ts`). 계정 화면의 `구글로 로그인`은 게스트 계정에 구글을 연결해 진행이 이어지고, 이미 저장이 있는 구글 계정이면 그 저장으로 바뀝니다.
+- Firebase 콘솔에서 해둘 것: Authentication → 로그인 방법 `익명`·`Google` 켜기(승인된 도메인에 배포 주소 포함), Firestore 만들기, `firestore.rules` 내용을 규칙 탭에 붙여 넣기 (또는 `firebase deploy --only firestore:rules`).
 - 실서버 점검: `npm run cloud:check` (게스트 로그인 → 읽기 → 쓰기 → 로그인 복원). 네트워크에서 Firebase 호스트가 열려 있어야 합니다.
 - 끄기/테스트: `?offline=1`, 자동화 브라우저에서는 자동으로 꺼짐(`?cloud=1`로 켬).
 

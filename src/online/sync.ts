@@ -21,6 +21,8 @@ export interface CloudBackend {
   load(user: CloudUser): Promise<CloudDoc | null>;
   save(user: CloudUser, doc: CloudDoc): Promise<void>;
   signOut(): Promise<void>;
+  /** 구글 로그인. 게스트에 연결하면 switched=false(uid 유지), 이미 있는 구글 계정으로 바뀌면 switched=true */
+  signInGoogle?(): Promise<{ user: CloudUser; switched: boolean }>;
 }
 
 export type CloudStatus = 'off' | 'connecting' | 'synced' | 'syncing' | 'error';
@@ -68,6 +70,33 @@ export class CloudSync {
       if (!this.user) this.user = await this.backend.init();
       await this.reconcile();
     });
+  }
+
+  /**
+   * 구글로 로그인한다. 팝업이 막히지 않도록 버튼을 누른 그 자리에서 바로 로그인을 시작하고,
+   * 끝난 뒤 서버와 맞춘다. 다른 계정으로 바뀌었다면 그 계정의 서버 저장이 있을 때 서버 저장이 이긴다.
+   */
+  signInGoogle(): Promise<void> {
+    if (!this.backend.signInGoogle) return Promise.resolve();
+    const attempt = this.backend.signInGoogle();
+    attempt.catch(() => undefined); // 아래 run 안에서 처리한다
+    return this.run(async () => {
+      this.set('connecting');
+      const { user, switched } = await attempt;
+      this.user = user;
+      if (switched) await this.adoptCloud();
+      else await this.reconcile();
+    });
+  }
+
+  /** 계정이 바뀐 직후: 서버에 저장이 있으면 그것으로 바꾸고, 없으면 이 기기의 저장을 올린다 */
+  private async adoptCloud(): Promise<void> {
+    this.set('syncing');
+    const remote = await this.backend.load(this.user!);
+    if (remote) this.store.replaceFromCloud(JSON.parse(remote.save), remote.updatedAt);
+    else await this.push();
+    this.lastSyncedAt = Date.now();
+    this.set('synced');
   }
 
   async signOut(): Promise<void> {

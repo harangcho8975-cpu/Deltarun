@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RestBackend } from '../src/online/restBackend';
+import { explainAuthError, FirebaseBackend, type Sdk } from '../src/online/firebaseBackend';
 import { CloudSync, type CloudBackend, type CloudDoc, type CloudUser } from '../src/online/sync';
 import { SaveStore, type KeyValueStorage } from '../src/save/SaveStore';
 
@@ -24,6 +24,11 @@ class FakeBackend implements CloudBackend {
     this.doc = d;
   }
   async signOut(): Promise<void> {}
+  google: { user: CloudUser; switched: boolean } | Error = { user: { uid: 'g1', anonymous: false, label: 'a@b.c' }, switched: false };
+  async signInGoogle(): Promise<{ user: CloudUser; switched: boolean }> {
+    if (this.google instanceof Error) throw this.google;
+    return this.google;
+  }
 }
 
 describe('클라우드 동기화', () => {
@@ -99,73 +104,168 @@ describe('클라우드 동기화', () => {
   });
 });
 
-describe('REST 백엔드 (모의 fetch)', () => {
-  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+describe('구글 로그인 (동기화)', () => {
+  it('게스트에 연결하면(uid 유지) 보통 동기화: 이 기기가 최신이면 올린다', async () => {
+    const store = new SaveStore(mem());
+    const b = new FakeBackend();
+    const sync = new CloudSync(store, b, 0);
+    await sync.start();
+    store.addCoins(70);
+    store.save();
+    await sync.signInGoogle();
+    expect(sync.user).toMatchObject({ uid: 'g1', anonymous: false, label: 'a@b.c' });
+    expect(JSON.parse(b.doc!.save).coins).toBe(170);
+    expect(sync.status).toBe('synced');
+  });
 
-  function makeFetch(docs: Map<string, unknown>) {
-    const calls: { url: string; method: string; auth?: string; body?: string }[] = [];
-    const f = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
-      const u = String(url);
-      const headers = (init?.headers ?? {}) as Record<string, string>;
-      calls.push({ url: u, method: init?.method ?? 'GET', auth: headers.Authorization, body: init?.body as string | undefined });
-      if (u.includes('accounts:signUp')) return json({ localId: 'abc', refreshToken: 'r1', idToken: 't1', expiresIn: '3600' });
-      if (u.includes('securetoken')) return json({ user_id: 'abc', refresh_token: 'r2', id_token: 't2', expires_in: '3600' });
-      if (u.includes('firestore.googleapis.com')) {
-        if (init?.method === 'PATCH') {
-          docs.set('doc', JSON.parse(init.body as string));
-          return json({});
-        }
-        return docs.has('doc') ? json(docs.get('doc')) : json({ error: { message: 'NOT_FOUND' } }, 404);
+  it('이미 있는 구글 계정으로 바뀌면 서버 저장이 이긴다 (이 기기가 더 최근이어도)', async () => {
+    const store = new SaveStore(mem());
+    const b = new FakeBackend();
+    const sync = new CloudSync(store, b, 0);
+    await sync.start();
+    b.doc = { save: JSON.stringify({ ...store.data, coins: 4242 }), updatedAt: 5 }; // 아주 오래된 서버 저장
+    store.addCoins(1);
+    store.save(); // 이 기기가 훨씬 최근
+    b.google = { user: { uid: 'g2', anonymous: false, label: 'x@y.z' }, switched: true };
+    await sync.signInGoogle();
+    expect(store.data.coins).toBe(4242);
+    expect(sync.user!.uid).toBe('g2');
+  });
+
+  it('바뀐 계정에 서버 저장이 없으면 이 기기의 진행을 올린다', async () => {
+    const store = new SaveStore(mem());
+    const b = new FakeBackend();
+    const sync = new CloudSync(store, b, 0);
+    await sync.start();
+    store.addCoins(9);
+    store.save();
+    b.doc = null;
+    b.google = { user: { uid: 'g3', anonymous: false }, switched: true };
+    await sync.signInGoogle();
+    expect(JSON.parse(b.doc!.save).coins).toBe(109);
+  });
+
+  it('로그인 취소·실패는 오류로 남고 게스트 상태는 그대로', async () => {
+    const store = new SaveStore(mem());
+    const b = new FakeBackend();
+    const sync = new CloudSync(store, b, 0);
+    await sync.start();
+    b.google = Object.assign(new Error('popup closed'), { code: 'auth/popup-closed-by-user' });
+    await sync.signInGoogle();
+    expect(sync.status).toBe('error');
+    expect(sync.lastError).toBe('popup closed');
+    expect(sync.user).toMatchObject({ uid: 'u1', anonymous: true });
+  });
+});
+
+describe('FirebaseBackend (가짜 SDK)', () => {
+  function fakeSdk(opts: { current?: { uid: string; isAnonymous: boolean; email?: string } | null; linkError?: { code: string } } = {}) {
+    const calls: string[] = [];
+    const docs = new Map<string, unknown>();
+    const auth = { currentUser: opts.current === undefined ? null : opts.current, authStateReady: async () => {} };
+    const mk = (uid: string, isAnonymous: boolean, email?: string) => ({ uid, isAnonymous, email, displayName: null });
+    class GoogleAuthProvider {
+      static credentialFromError(e: unknown) {
+        return (e as { code: string }).code ? { cred: true } : null;
       }
-      return json({}, 500);
-    });
-    return { f: f as unknown as typeof fetch, calls };
+    }
+    const sdk = {
+      app: { getApps: () => [], getApp: () => ({}), initializeApp: () => ({}) },
+      auth: {
+        getAuth: () => auth,
+        GoogleAuthProvider,
+        signInAnonymously: async (a: typeof auth) => {
+          calls.push('anon');
+          a.currentUser = mk('anon1', true);
+        },
+        linkWithPopup: async () => {
+          calls.push('link');
+          if (opts.linkError) throw opts.linkError;
+          return { user: mk(auth.currentUser!.uid, false, 'me@g.com') };
+        },
+        signInWithPopup: async (a: typeof auth) => {
+          calls.push('popup');
+          a.currentUser = mk('google1', false, 'me@g.com');
+          return { user: a.currentUser };
+        },
+        signInWithCredential: async (a: typeof auth) => {
+          calls.push('credential');
+          a.currentUser = mk('existing', false, 'me@g.com');
+          return { user: a.currentUser };
+        },
+        signOut: async (a: typeof auth) => {
+          calls.push('signout');
+          a.currentUser = null;
+        },
+      },
+      fs: {
+        getFirestore: () => ({}),
+        doc: (_db: unknown, c: string, id: string) => `${c}/${id}`,
+        getDoc: async (ref: string) => ({ exists: () => docs.has(ref), data: () => docs.get(ref) }),
+        setDoc: async (ref: string, v: unknown) => void docs.set(ref, v),
+      },
+    };
+    return { sdk: sdk as unknown as Sdk, calls, docs, auth };
   }
-  const cfg = { apiKey: 'KEY', projectId: 'proj' };
-  const store = () => {
-    const m = new Map<string, string>();
-    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
-  };
 
-  it('게스트 로그인 → 문서가 없으면 null → 저장 → 다시 읽으면 같은 값', async () => {
-    const { f, calls } = makeFetch(new Map());
-    const b = new RestBackend(cfg, f, store());
-    const user = await b.init();
-    expect(user).toMatchObject({ uid: 'abc', anonymous: true });
-    expect(calls[0].url).toContain('identitytoolkit.googleapis.com/v1/accounts:signUp?key=KEY');
-    expect(await b.load(user)).toBeNull();
-    await b.save(user, { save: '{"a":1}', updatedAt: 1234 });
-    const patch = calls.find((c) => c.method === 'PATCH')!;
-    expect(patch.url).toContain('/projects/proj/databases/(default)/documents/users/abc');
-    expect(patch.url).toContain('updateMask.fieldPaths=save');
-    expect(patch.auth).toBe('Bearer t1');
-    expect(await b.load(user)).toEqual({ save: '{"a":1}', updatedAt: 1234 });
+  it('저장된 로그인이 없으면 게스트로 시작, 있으면 그대로 쓴다', async () => {
+    const a = fakeSdk();
+    const u = await new FirebaseBackend({}, async () => a.sdk).init();
+    expect(u).toMatchObject({ uid: 'anon1', anonymous: true });
+    expect(a.calls).toEqual(['anon']);
+
+    const b = fakeSdk({ current: { uid: 'keep', isAnonymous: true } });
+    expect((await new FirebaseBackend({}, async () => b.sdk).init()).uid).toBe('keep');
+    expect(b.calls).toEqual([]);
   });
 
-  it('다음 접속에서는 저장된 로그인을 되살린다 (새 게스트를 만들지 않음)', async () => {
-    const st = store();
-    const first = makeFetch(new Map());
-    await new RestBackend(cfg, first.f, st).init();
-    const second = makeFetch(new Map());
-    const user = await new RestBackend(cfg, second.f, st).init();
-    expect(user.uid).toBe('abc');
-    expect(second.calls.some((c) => c.url.includes('accounts:signUp'))).toBe(false);
-    expect(second.calls[0].url).toContain('securetoken.googleapis.com');
+  it('게스트에 구글을 연결하면 uid가 유지된다', async () => {
+    const f = fakeSdk({ current: { uid: 'guest1', isAnonymous: true } });
+    const r = await new FirebaseBackend({}, async () => f.sdk).signInGoogle();
+    expect(f.calls).toEqual(['link']);
+    expect(r).toEqual({ user: { uid: 'guest1', anonymous: false, label: 'me@g.com' }, switched: false });
   });
 
-  it('토큰이 곧 만료되면 갱신해서 쓴다', async () => {
-    let t = 0;
-    const { f, calls } = makeFetch(new Map());
-    const b = new RestBackend(cfg, f, store(), () => t);
-    const user = await b.init();
-    t = 3_600_000; // 1시간 뒤
-    await b.load(user);
-    expect(calls.some((c) => c.url.includes('securetoken'))).toBe(true);
-    expect(calls[calls.length - 1].auth).toBe('Bearer t2');
+  it('이미 쓰이는 구글 계정이면 그 계정으로 로그인한다 (switched)', async () => {
+    const f = fakeSdk({ current: { uid: 'guest1', isAnonymous: true }, linkError: { code: 'auth/credential-already-in-use' } });
+    const r = await new FirebaseBackend({}, async () => f.sdk).signInGoogle();
+    expect(f.calls).toEqual(['link', 'credential']);
+    expect(r.switched).toBe(true);
+    expect(r.user.uid).toBe('existing');
   });
 
-  it('서버 오류는 메시지와 함께 예외로 올라온다', async () => {
-    const f = vi.fn(async () => json({ error: { message: 'ADMIN_ONLY_OPERATION' } }, 400)) as unknown as typeof fetch;
-    await expect(new RestBackend(cfg, f, store()).init()).rejects.toThrow('ADMIN_ONLY_OPERATION');
+  it('다른 오류는 그대로 던진다', async () => {
+    const f = fakeSdk({ current: { uid: 'g', isAnonymous: true }, linkError: { code: 'auth/popup-closed-by-user' } });
+    await expect(new FirebaseBackend({}, async () => f.sdk).signInGoogle()).rejects.toMatchObject({ code: 'auth/popup-closed-by-user' });
+  });
+
+  it('이미 구글로 로그인했다면 팝업을 띄우지 않는다', async () => {
+    const f = fakeSdk({ current: { uid: 'g', isAnonymous: false, email: 'e@g.com' } });
+    const r = await new FirebaseBackend({}, async () => f.sdk).signInGoogle();
+    expect(f.calls).toEqual([]);
+    expect(r.switched).toBe(false);
+  });
+
+  it('Firestore: users/{uid} 문서를 읽고 쓴다 (없으면 null)', async () => {
+    const f = fakeSdk({ current: { uid: 'u9', isAnonymous: true } });
+    const b = new FirebaseBackend({}, async () => f.sdk);
+    const u = await b.init();
+    expect(await b.load(u)).toBeNull();
+    await b.save(u, { save: '{"a":1}', updatedAt: 77 });
+    expect(f.docs.get('users/u9')).toEqual({ save: '{"a":1}', updatedAt: 77, version: 1 });
+    expect(await b.load(u)).toEqual({ save: '{"a":1}', updatedAt: 77 });
+  });
+
+  it('로그아웃하면 SDK 로그아웃을 부른다', async () => {
+    const f = fakeSdk({ current: { uid: 'u', isAnonymous: true } });
+    const b = new FirebaseBackend({}, async () => f.sdk);
+    await b.signOut();
+    expect(f.calls).toEqual(['signout']);
+  });
+
+  it('오류 문구', () => {
+    expect(explainAuthError({ code: 'auth/popup-blocked' })).toContain('팝업');
+    expect(explainAuthError({ code: 'auth/unauthorized-domain' })).toContain('승인된 도메인');
+    expect(explainAuthError(new Error('boom'))).toBe('boom');
   });
 });
