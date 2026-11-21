@@ -354,22 +354,34 @@ test('뽑기: 코인으로 뽑으면 장비를 얻고, 장비 화면에서 최�
   expect(errors).toEqual([]);
 });
 
-test('이벤트 탭: 출석 보상은 하루 한 번, 캐릭터 뽑기로 캐릭터를 얻는다', async ({ page }) => {
+test('이벤트: 왼쪽에 이벤트 제목이 세로로, 누르면 오른쪽에 그 화면. 출석 보상은 하루 한 번, 픽업 뽑기로 캐릭터를 얻는다', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/?debug=1&coins=1000');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
   await page.keyboard.press('KeyV');
   await expect.poll(() => activeScenes(page)).toContain('Event');
-  await page.mouse.click(320, 430); // 받기
+  const tab = () => page.evaluate(() => (window.__deltaRun!.game.scene.getScene('Event') as unknown as { tab: string }).tab);
+  expect(await tab()).toBe('attendance'); // 처음엔 맨 위 이벤트
+  await page.screenshot({ path: 'test-results/event.png' });
+
+  await page.mouse.click(835, 620); // 받기
   await page.waitForTimeout(300);
   const coins = () => page.evaluate(() => JSON.parse(localStorage.getItem('deltarun.save')!).coins as number);
   const after = await coins();
-  await page.mouse.click(320, 430); // 두 번째는 받아지지 않는다
+  await page.mouse.click(835, 620); // 두 번째는 받아지지 않는다
   await page.waitForTimeout(300);
   expect(await coins()).toBe(after);
-  await page.screenshot({ path: 'test-results/event.png' });
 
-  await page.mouse.click(960, 430); // 픽업 뽑기
+  // 세 번째 이벤트(신규 캐릭터)
+  await page.mouse.click(210, 120 + 2 * 110 + 48);
+  await expect.poll(tab).toBe('jevil');
+  await page.screenshot({ path: 'test-results/event-jevil.png' });
+
+  // 두 번째 이벤트(픽업) → 뽑으러 가기
+  await page.mouse.click(210, 120 + 110 + 48);
+  await expect.poll(tab).toBe('pickup');
+  await page.screenshot({ path: 'test-results/event-pickup.png' });
+  await page.mouse.click(955, 620);
   await expect.poll(() => activeScenes(page)).toContain('Gacha');
   await page.keyboard.press('Digit0');
   await page.waitForTimeout(1500);
