@@ -3,7 +3,8 @@ import { ECONOMY } from '../config/economy';
 import { RARITY } from '../data/characters';
 import { describeEffect, equipment, equipmentById, type Equipment } from '../data/equipment';
 import { saveStore } from '../save/store';
-import { button, COLORS, text } from '../ui/style';
+import { button, COLORS, text, topBar } from '../ui/style';
+import type { PickContext } from './CharacterListScene';
 
 const W = 1280;
 const H = 720;
@@ -18,11 +19,23 @@ const GRID_TOP = 316;
 
 /**
  * 장비 화면: 위쪽에 장착 슬롯 3개, 아래쪽에 모든 장비(가진 것은 밝게, 못 가진 것은 어둡게).
- * 가진 장비를 누르면 장착·해제되고, 슬롯을 누르면 해제된다. 슬롯이 가득 차면 장착되지 않는다.
+ * 준비 화면에서 열면('pick') 가진 장비를 눌러 장착·해제하고, 슬롯을 눌러 해제한다. 슬롯이 가득 차면 장착되지 않는다.
+ * 로비에서 열면('view') 구경만 한다.
  */
 export class EquipmentScene extends Phaser.Scene {
+  private ctx: PickContext = { mode: 'view' };
+
   constructor() {
     super('Equipment');
+  }
+
+  init(data?: Partial<PickContext> & { toast?: string }): void {
+    this.ctx = { mode: data?.mode ?? 'view', stageId: data?.stageId };
+  }
+
+  private back(): void {
+    if (this.ctx.mode === 'pick') this.scene.start('Ready', { stageId: this.ctx.stageId });
+    else this.scene.start('Lobby');
   }
 
   create(data?: { toast?: string }): void {
@@ -33,13 +46,13 @@ export class EquipmentScene extends Phaser.Scene {
     const owned = equipment.filter((e) => eq.owned[e.id]).length;
 
     // 머리줄
-    button(this, 120, 52, 180, 64, '← 로비', () => this.scene.start('Lobby'), 0xdfe6f5, 24);
-    text(this, 640, 52, '장비', 40, '#ffffff', true).setOrigin(0.5);
-    text(this, 1230, 36, `코인 ${saveStore.data.coins.toLocaleString()}`, 24, '#ffd23f', true).setOrigin(1, 0.5);
-    button(this, 1110, 84, 220, 52, '장비 뽑기 →', () => this.scene.start('Gacha'), COLORS.accent, 22);
+    const pick = this.ctx.mode === 'pick';
+    topBar(this, pick ? '장비 고르기' : '장비', () => this.back(), saveStore.data.coins);
+    button(this, 1150, 292, 200, 48, '장비 뽑기 →', () => this.scene.start('Gacha'), COLORS.purple, 20);
 
     // 장착 슬롯
-    text(this, 40, 100, `장착 중  ${eq.equipped.length} / ${ECONOMY.equipSlots}`, 22, '#ffffff', true);
+    text(this, 40, 108, `장착 중  ${eq.equipped.length} / ${ECONOMY.equipSlots}`, 22, '#ffffff', true);
+    text(this, 1240, 120, pick ? '장비를 눌러 장착·해제 (최대 3개)' : '장착은 스테이지를 고른 뒤 준비 화면에서', 17, COLORS.inkDim).setOrigin(1, 0.5);
     for (let i = 0; i < ECONOMY.equipSlots; i++) {
       const id = eq.equipped[i];
       this.slot(40 + SLOT_W / 2 + i * (SLOT_W + 30), SLOT_Y, id ? equipmentById(id) : undefined);
@@ -56,12 +69,12 @@ export class EquipmentScene extends Phaser.Scene {
     });
 
     if (data?.toast) {
-      const t = text(this, 1240, 292, data.toast, 20, '#ffb3b3', true).setOrigin(1, 0.5);
+      const t = text(this, 1030, 292, data.toast, 20, '#ffb3b3', true).setOrigin(1, 0.5);
       this.tweens.add({ targets: t, alpha: 0, delay: 1400, duration: 500 });
     }
 
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
-      if (ev.code === 'Escape' || ev.code === 'Backspace') this.scene.start('Lobby');
+      if (ev.code === 'Escape' || ev.code === 'Backspace') this.back();
       if (ev.code === 'KeyG') this.scene.start('Gacha');
     });
   }
@@ -73,13 +86,13 @@ export class EquipmentScene extends Phaser.Scene {
     g.lineStyle(4, r ? r.color : 0x4a5068, 1).strokeRoundedRect(x - SLOT_W / 2, y - SLOT_H / 2, SLOT_W, SLOT_H, 16);
     if (!e) {
       text(this, x, y - 10, '빈 슬롯', 26, '#8a90a8', true).setOrigin(0.5);
-      text(this, x, y + 24, '아래 장비를 눌러 장착', 16, '#6b7190').setOrigin(0.5);
+      text(this, x, y + 24, this.ctx.mode === 'pick' ? '아래 장비를 눌러 장착' : '비어 있음', 16, '#6b7190').setOrigin(0.5);
       return;
     }
     text(this, x - SLOT_W / 2 + 18, y - SLOT_H / 2 + 14, e.name, 26, '#1a1a2e', true);
     text(this, x - SLOT_W / 2 + 18, y - SLOT_H / 2 + 50, RARITY[e.rarity].label, 16, RARITY[e.rarity].css, true);
     text(this, x - SLOT_W / 2 + 18, y - SLOT_H / 2 + 74, describeEffect(e.effect).join('\n'), 17, '#33384d').setWordWrapWidth(SLOT_W - 36, true);
-    text(this, x + SLOT_W / 2 - 16, y - SLOT_H / 2 + 16, '눌러서 해제', 14, '#8a90a8').setOrigin(1, 0);
+    if (this.ctx.mode === 'pick') text(this, x + SLOT_W / 2 - 16, y - SLOT_H / 2 + 16, '눌러서 해제', 14, '#8a90a8').setOrigin(1, 0);
     this.add.zone(x, y, SLOT_W, SLOT_H).setInteractive({ useHandCursor: true }).on('pointerup', () => this.toggle(e.id));
   }
 
@@ -114,7 +127,11 @@ export class EquipmentScene extends Phaser.Scene {
   }
 
   private toggle(id: string): void {
+    if (this.ctx.mode !== 'pick') {
+      this.scene.restart({ ...this.ctx, toast: '장착은 스테이지를 고른 뒤 준비 화면에서 할 수 있어요' });
+      return;
+    }
     const result = saveStore.toggleEquip(id);
-    this.scene.restart({ toast: result === 'full' ? `슬롯이 가득 찼어요 (최대 ${ECONOMY.equipSlots}개)` : undefined });
+    this.scene.restart({ ...this.ctx, toast: result === 'full' ? `슬롯이 가득 찼어요 (최대 ${ECONOMY.equipSlots}개)` : undefined });
   }
 }

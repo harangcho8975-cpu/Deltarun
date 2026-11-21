@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { cloud, cloudEnabled } from '../online';
 import { saveStore } from '../save/store';
-import { button, COLORS, text } from '../ui/style';
+import { button, COLORS, panel, text, topBar } from '../ui/style';
 
 const W = 1280;
 const H = 720;
@@ -25,23 +25,19 @@ export class AccountScene extends Phaser.Scene {
   create(): void {
     this.add.tileSprite(0, 0, W, H, 'bg_far').setOrigin(0);
     this.add.rectangle(0, 0, W, H, COLORS.panel, 0.82).setOrigin(0);
-    button(this, 120, 52, 180, 64, '← 로비', () => this.scene.start('Lobby'), 0xdfe6f5, 24);
-    text(this, 640, 52, '계정 · 클라우드 저장', 40, '#ffffff', true).setOrigin(0.5);
+    topBar(this, '계정', () => this.scene.start('Lobby'));
+    panel(this, 240, 140, 800, 400, '클라우드 저장', COLORS.blue);
 
-    const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.97).fillRoundedRect(240, 130, 800, 400, 20);
-    g.fillStyle(0x4a90e2, 1).fillRoundedRect(240, 130, 800, 10, { tl: 20, tr: 20, bl: 0, br: 0 });
-
-    const state = text(this, 290, 170, '', 34, '#1a1a2e', true);
+    const state = text(this, 290, 176, '', 34, '#1a1a2e', true);
     const who = text(this, 290, 228, '', 22, '#4a5068');
     const last = text(this, 290, 266, '', 20, '#4a5068');
     const note = text(this, 290, 308, '', 17, '#33384d').setWordWrapWidth(710, true).setLineSpacing(2);
-    const local = text(this, 290, 484, `이 기기 저장 시각: ${saveStore.data.updatedAt ? new Date(saveStore.data.updatedAt).toLocaleString() : '-'}`, 16, '#8a90a8');
+    const local = text(this, 290, 494, `이 기기 저장 시각: ${saveStore.data.updatedAt ? new Date(saveStore.data.updatedAt).toLocaleString() : '-'}`, 16, '#8a90a8');
     void local;
 
-    const googleBtn = button(this, 400, 430, 220, 70, '구글로 로그인', () => void cloud?.signInGoogle(), 0xffffff, 24);
-    const syncBtn = button(this, 640, 430, 220, 70, '지금 동기화', () => void cloud?.syncNow(), COLORS.accent, 24);
-    const outBtn = button(this, 880, 430, 220, 70, '로그아웃', async () => {
+    const googleBtn = button(this, 400, 440, 220, 70, '구글로 로그인', () => void cloud?.signInGoogle(), 0xffffff, 24);
+    const syncBtn = button(this, 640, 440, 220, 70, '지금 동기화', () => void cloud?.syncNow(), COLORS.yellow, 24);
+    const outBtn = button(this, 880, 440, 220, 70, '로그아웃', async () => {
       await cloud?.signOut();
     }, 0xdfe6f5, 24);
 

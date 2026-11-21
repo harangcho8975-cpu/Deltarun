@@ -5,7 +5,7 @@ import { describeEffect, equipmentById } from '../data/equipment';
 import { type Banner, pullCharacters, ratesFor } from '../gacha/characterGacha';
 import { pull, type PullOutcome, type PullResult } from '../gacha/gacha';
 import { saveStore } from '../save/store';
-import { button, COLORS, text, type Button } from '../ui/style';
+import { button, COLORS, text, topBar, type Button } from '../ui/style';
 import { fitImage } from './CharacterListScene';
 
 const W = 1280;
@@ -62,12 +62,11 @@ export class GachaScene extends Phaser.Scene {
     this.add.tileSprite(0, 0, W, H, 'bg_far').setOrigin(0);
     this.add.rectangle(0, 0, W, H, COLORS.panel, 0.82).setOrigin(0);
 
-    button(this, 120, 52, 180, 64, '← 로비', () => this.scene.start('Lobby'), 0xdfe6f5, 24);
+    this.coinText = topBar(this, '', () => this.scene.start('Lobby'), saveStore.data.coins).coinLabel!;
     // 탭
-    button(this, 470, 52, 200, 56, '장비 뽑기', () => this.scene.start('Gacha', { mode: 'equipment' }), ch ? 0xdfe6f5 : COLORS.accent, 24);
-    button(this, 690, 52, 220, 56, '캐릭터 뽑기', () => this.scene.start('Gacha', { mode: 'character' }), ch ? COLORS.accent : 0xdfe6f5, 24);
-    this.coinText = text(this, 1230, 36, '', 24, '#ffd23f', true).setOrigin(1, 0.5);
-    button(this, 1110, 84, 220, 52, ch ? '← 캐릭터 보기' : '← 장비 보기', () => this.scene.start(ch ? 'Characters' : 'Equipment'), 0xdfe6f5, 22);
+    button(this, 520, 46, 220, 62, '장비 뽑기', () => this.scene.start('Gacha', { mode: 'equipment' }), ch ? 0x6b7190 : COLORS.yellow, 24);
+    button(this, 760, 46, 220, 62, '캐릭터 뽑기', () => this.scene.start('Gacha', { mode: 'character' }), ch ? COLORS.yellow : 0x6b7190, 24);
+    button(this, 130, 640, 200, 70, ch ? '캐릭터 보기' : '장비 보기', () => this.scene.start(ch ? 'Characters' : 'Equipment', { mode: 'view' }), COLORS.blue, 22);
 
     const r = ch ? ratesFor(this.banner) : ECONOMY.rates;
     const label = ch && this.banner === 'pickup' ? '[픽업] ' : '';
@@ -86,8 +85,8 @@ export class GachaScene extends Phaser.Scene {
     this.hint = text(this, 640, 340, `아래 버튼으로 ${ch ? '캐릭터' : '장비'}를 뽑아 보세요`, 28, COLORS.inkDim).setOrigin(0.5);
     this.toastText = text(this, 640, 560, '', 22, '#ffb3b3', true).setOrigin(0.5);
 
-    this.btn1 = button(this, 400, 640, 340, 84, `1회 뽑기  ${this.costs.one} 코인`, () => this.doPull(1), COLORS.accent, 28);
-    this.btn10 = button(this, 880, 640, 340, 84, `10회 뽑기  ${this.costs.ten} 코인`, () => this.doPull(10), COLORS.accent, 28);
+    this.btn1 = button(this, 480, 640, 340, 84, `1회 뽑기  ${this.costs.one} 코인`, () => this.doPull(1), COLORS.yellow, 28);
+    this.btn10 = button(this, 900, 640, 340, 84, `10회 뽑기  ${this.costs.ten} 코인`, () => this.doPull(10), COLORS.pink, 28);
     this.refresh();
 
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
@@ -103,7 +102,7 @@ export class GachaScene extends Phaser.Scene {
 
   private refresh(): void {
     const c = saveStore.data.coins;
-    this.coinText.setText(`코인 ${c.toLocaleString()}`);
+    this.coinText.setText(c.toLocaleString());
     this.btn1.setEnabled(c >= this.costs.one);
     this.btn10.setEnabled(c >= this.costs.ten);
   }

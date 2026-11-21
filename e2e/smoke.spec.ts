@@ -15,7 +15,10 @@ test('이미지 파일 없이 로비 → 스테이지 1 → 점프, 콘솔 에�
   await page.goto('/');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
   await page.keyboard.press('Enter'); // 플레이 → 스테이지 카드
-  await page.keyboard.press('1');
+  await page.keyboard.press('1'); // 스테이지 1 → 준비 화면
+  await expect.poll(() => activeScenes(page)).toContain('Ready');
+  await page.screenshot({ path: 'test-results/ready.png' });
+  await page.keyboard.press('Enter'); // 게임 시작
   await expect.poll(() => activeScenes(page)).toContain('Game');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.tick)).toBeGreaterThan(30);
   await page.keyboard.press('Space');
@@ -114,14 +117,26 @@ test('로비: 캐릭터가 가운데, 플레이를 누르면 세로 카드가 �
   expect(errors).toEqual([]);
 });
 
-test('로비 캐릭터를 누르면 격자 목록 → 카드를 누르면 정보 화면 → 선택하면 로비 캐릭터가 바뀐다', async ({ page }) => {
+test('스테이지 선택 → 준비 화면에서 캐릭터 변경 → 목록 → 정보 → [이 캐릭터로] → 준비 화면, 로비 캐릭터도 바뀐다', async ({ page }) => {
   const errors = collectErrors(page);
   // 블루베리를 이미 뽑은 상태로 시작
   await page.addInitScript(() => localStorage.setItem('deltarun.save', JSON.stringify({ version: 1, ownedCharacters: ['orange', 'frisk', 'blueberry'] })));
   await page.goto('/');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  await page.screenshot({ path: 'test-results/lobby.png' });
 
-  await page.mouse.click(640, 400); // 가운데 캐릭터
+  // 로비에서 캐릭터를 누르면 구경만 (선택 버튼 없음)
+  await page.mouse.click(640, 480);
+  await expect.poll(() => activeScenes(page)).toContain('Characters');
+  expect(await page.evaluate(() => (window.__deltaRun!.game.scene.getScene('Characters') as unknown as { ctx: { mode: string } }).ctx.mode)).toBe('view');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+
+  // 플레이 → 스테이지 1 → 준비 화면 → 캐릭터 변경
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('1');
+  await expect.poll(() => activeScenes(page)).toContain('Ready');
+  await page.keyboard.press('KeyC');
   await expect.poll(() => activeScenes(page)).toContain('Characters');
   const cards = await page.evaluate(() => {
     const s = window.__deltaRun!.game.scene.getScene('Characters') as unknown as { grid: { list: { x: number; y: number; getData(k: string): string }[] } };
@@ -136,8 +151,11 @@ test('로비 캐릭터를 누르면 격자 목록 → 카드를 누르면 정보
   expect(await page.evaluate(() => (window.__deltaRun!.game.scene.getScene('CharacterInfo') as unknown as { id: string }).id)).toBe('blueberry');
   await page.screenshot({ path: 'test-results/character-info.png' });
 
-  await page.mouse.click(1090, 674); // 선택하기
+  await page.mouse.click(1090, 670); // 이 캐릭터로
+  await expect.poll(() => activeScenes(page)).toContain('Ready');
+  await page.keyboard.press('Escape'); // 준비 화면 → 스테이지 카드
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
+  await page.keyboard.press('Escape'); // 스테이지 카드 닫기
   expect(
     await page.evaluate(() => (window.__deltaRun!.game.scene.getScene('Lobby') as unknown as { hero: { texture: { key: string } } }).hero.texture.key),
   ).toBe('char_blueberry');
@@ -304,19 +322,35 @@ test('뽑기: 코인으로 뽑으면 장비를 얻고, 장비 화면에서 최�
 
   await page.keyboard.press('Escape');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
-  await page.keyboard.press('KeyE');
-  await expect.poll(() => activeScenes(page)).toContain('Equipment');
-  // 보유 장비를 앞에서부터 눌러 4개 장착 시도
   const ids = await sceneEval<string[]>(page, `Object.keys(JSON.parse(localStorage.getItem('deltarun.save')).equipment.owned)`);
   expect(ids.length).toBeGreaterThanOrEqual(4);
   const { toggle } = { toggle: async (id: string) => page.evaluate((i) => (window as any).__deltaRun.game.scene.getScene('Equipment').toggle(i), id) };
+  const equippedNow = () => sceneEval<string[]>(page, `JSON.parse(localStorage.getItem('deltarun.save')).equipment.equipped`);
+
+  // 로비에서 연 장비 화면은 구경만: 눌러도 장착되지 않는다
+  await page.keyboard.press('KeyE');
+  await expect.poll(() => activeScenes(page)).toContain('Equipment');
+  await toggle(ids[0]);
+  await page.waitForTimeout(150);
+  expect(await equippedNow()).toHaveLength(0);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => activeScenes(page)).toContain('Lobby');
+
+  // 스테이지 선택 → 준비 화면 → 장비 고르기: 4개를 눌러도 3개까지만
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('1');
+  await expect.poll(() => activeScenes(page)).toContain('Ready');
+  await page.keyboard.press('KeyE');
+  await expect.poll(() => activeScenes(page)).toContain('Equipment');
   for (const id of ids.slice(0, 4)) {
     await toggle(id);
     await page.waitForTimeout(150);
   }
-  const equipped = await sceneEval<string[]>(page, `JSON.parse(localStorage.getItem('deltarun.save')).equipment.equipped`);
-  expect(equipped).toHaveLength(3);
+  expect(await equippedNow()).toHaveLength(3);
   await page.screenshot({ path: 'test-results/equipment.png' });
+  await page.keyboard.press('Escape'); // 준비 화면으로 돌아온다
+  await expect.poll(() => activeScenes(page)).toContain('Ready');
+  await page.screenshot({ path: 'test-results/ready-equipped.png' });
   expect(errors).toEqual([]);
 });
 
@@ -392,7 +426,7 @@ test('계정 화면: 로비 → 계정, 자동화 브라우저에서는 클라�
   const errors = collectErrors(page);
   await page.goto('/');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
-  await page.mouse.click(1000, 104); // 계정
+  await page.mouse.click(66, 310); // 왼쪽 메뉴의 계정
   await expect.poll(() => activeScenes(page)).toContain('Account');
   await page.waitForTimeout(300);
   await page.screenshot({ path: 'test-results/account.png' });

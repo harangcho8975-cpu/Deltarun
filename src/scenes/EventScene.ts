@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { ECONOMY } from '../config/economy';
 import { saveStore } from '../save/store';
-import { button, COLORS, text } from '../ui/style';
+import { button, COLORS, panel, text, topBar } from '../ui/style';
 
 const W = 1280;
 const H = 720;
@@ -21,17 +21,14 @@ export class EventScene extends Phaser.Scene {
   create(): void {
     this.add.tileSprite(0, 0, W, H, 'bg_far').setOrigin(0);
     this.add.rectangle(0, 0, W, H, COLORS.panel, 0.82).setOrigin(0);
-    button(this, 120, 52, 180, 64, '← 로비', () => this.scene.start('Lobby'), 0xdfe6f5, 24);
-    text(this, 640, 52, '이벤트', 40, '#ffffff', true).setOrigin(0.5);
-    const coinText = text(this, 1230, 36, `코인 ${saveStore.data.coins.toLocaleString()}`, 24, '#ffd23f', true).setOrigin(1, 0.5);
+    const { coinLabel } = topBar(this, '이벤트', () => this.scene.start('Lobby'), saveStore.data.coins);
 
     // 출석 보상
     const today = todayKey();
-    this.panel(40, 130, 560, 380, 0x4a90e2);
-    text(this, 70, 156, '출석 보상', 34, '#1a1a2e', true);
-    text(this, 70, 210, '하루에 한 번 접속해서 받아요', 20, '#4a5068');
-    text(this, 70, 270, `+${ECONOMY.attendanceCoins} 코인`, 56, '#d98a00', true);
-    const claim = button(this, 320, 450, 360, 80, '', () => {}, COLORS.accent, 30);
+    panel(this, 40, 140, 560, 400, '출석 보상', COLORS.blue);
+    text(this, 320, 210, '하루에 한 번 접속해서 받아요', 20, '#7a6048').setOrigin(0.5);
+    text(this, 320, 300, `+${ECONOMY.attendanceCoins} 코인`, 60, '#f5a623', true).setOrigin(0.5).setStroke('#8a5a00', 5);
+    const claim = button(this, 320, 450, 360, 84, '', () => {}, COLORS.green, 30);
     const label = claim.list[1] as Phaser.GameObjects.Text;
     const sync = () => {
       const can = saveStore.canClaimAttendance(today);
@@ -40,29 +37,23 @@ export class EventScene extends Phaser.Scene {
     };
     claim.on('pointerup', () => {
       if (saveStore.claimAttendance(today) > 0) {
-        coinText.setText(`코인 ${saveStore.data.coins.toLocaleString()}`);
+        coinLabel!.setText(saveStore.data.coins.toLocaleString());
         sync();
       }
     });
     sync();
 
     // 카오스 킹 픽업 뽑기
-    this.panel(680, 130, 560, 380, 0xf5a623);
-    text(this, 710, 156, '카오스 킹 픽업 뽑기', 34, '#1a1a2e', true);
-    text(this, 710, 210, '레전드 확률이 올라가요', 20, '#4a5068');
+    panel(this, 680, 140, 560, 400, '픽업 뽑기', COLORS.pink);
+    text(this, 960, 196, '카오스 킹 픽업!', 30, '#4a3520', true).setOrigin(0.5);
     const r = ECONOMY.charPickupRates;
-    text(this, 710, 262, `레전드 ${Math.round(r.legendary * 100)}%  (기본 ${Math.round(ECONOMY.charRates.legendary * 100)}%)`, 40, '#d98a00', true);
-    text(this, 710, 330, `1회 ${ECONOMY.charPullCost} · 10회 ${ECONOMY.charPull10Cost} 코인\n10회 뽑기는 레어 이상 1개 보장`, 20, '#33384d').setLineSpacing(6);
-    button(this, 960, 450, 360, 80, '뽑으러 가기', () => this.scene.start('Gacha', { mode: 'character', banner: 'pickup' }), COLORS.accent, 30);
+    text(this, 960, 262, `레전드 ${Math.round(r.legendary * 100)}%  (기본 ${Math.round(ECONOMY.charRates.legendary * 100)}%)`, 38, '#f5a623', true).setOrigin(0.5).setStroke('#8a5a00', 4);
+    text(this, 960, 340, `레전드가 나오면 언제나 카오스 킹\n1회 ${ECONOMY.charPullCost} · 10회 ${ECONOMY.charPull10Cost} 코인 · 10회는 레어 이상 1개 보장`, 18, '#7a6048').setOrigin(0.5).setAlign('center').setLineSpacing(6);
+    button(this, 960, 450, 360, 84, '뽑으러 가기', () => this.scene.start('Gacha', { mode: 'character', banner: 'pickup' }), COLORS.pink, 30);
 
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       if (ev.code === 'Escape' || ev.code === 'Backspace') this.scene.start('Lobby');
     });
   }
 
-  private panel(x: number, y: number, w: number, h: number, color: number): void {
-    const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.97).fillRoundedRect(x, y, w, h, 20);
-    g.fillStyle(color, 1).fillRoundedRect(x, y, w, 10, { tl: 20, tr: 20, bl: 0, br: 0 });
-  }
 }

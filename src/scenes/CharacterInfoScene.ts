@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import { ABILITY_LABEL, characterById, characterIndex, characters, RARITY } from '../data/characters';
 import { saveStore } from '../save/store';
-import { button, COLORS, text } from '../ui/style';
+import { button, COLORS, text, topBar } from '../ui/style';
+import type { PickContext } from './CharacterListScene';
 import { fitImage } from './CharacterListScene';
 
 const W = 1280;
 const H = 720;
-const PANEL = { x: 640, y: 104, w: 600, h: 524 };
+const PANEL = { x: 640, y: 116, w: 600, h: 492 };
 
 /**
  * 캐릭터 정보: 왼쪽에 캐릭터를 크게, 오른쪽 패널에 이름·등급·스킬·소개.
@@ -19,8 +20,15 @@ export class CharacterInfoScene extends Phaser.Scene {
     super('CharacterInfo');
   }
 
-  init(data: { id: string }): void {
+  private ctx: PickContext = { mode: 'view' };
+
+  init(data: { id: string } & Partial<PickContext>): void {
     this.id = characterById(data?.id ?? '').id;
+    this.ctx = { mode: data?.mode ?? 'view', stageId: data?.stageId };
+  }
+
+  private back(): void {
+    this.scene.start('Characters', this.ctx);
   }
 
   create(): void {
@@ -37,10 +45,9 @@ export class CharacterInfoScene extends Phaser.Scene {
     this.tweens.add({ targets: hero, y: 632, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     // 머리줄
-    text(this, W / 2, 52, '캐릭터 정보', 30, COLORS.inkDim, true).setOrigin(0.5);
-    button(this, 120, 52, 180, 64, '← 목록', () => this.scene.start('Characters'), 0xdfe6f5, 24);
+    topBar(this, '캐릭터 정보', () => this.back());
     const i = characterIndex(c.id);
-    text(this, W - 40, 52, `${i + 1} / ${characters.length}`, 22, COLORS.inkDim).setOrigin(1, 0.5);
+    text(this, W - 40, 46, `${i + 1} / ${characters.length}`, 22, COLORS.inkDim).setOrigin(1, 0.5);
 
     // 앞뒤 캐릭터
     if (characters.length > 1) {
@@ -50,14 +57,18 @@ export class CharacterInfoScene extends Phaser.Scene {
 
     this.buildPanel(c, r, selected);
 
-    // 오른쪽 아래 [선택하기]
+    // 오른쪽 아래: 준비 화면에서 왔으면 [이 캐릭터로], 로비에서 왔으면 안내만
     const owned = saveStore.ownsCharacter(c.id);
-    const pick = button(this, 1090, 674, 300, 80, !owned ? '미보유' : selected ? '선택 중' : '선택하기', () => this.pick(), COLORS.accent, 34);
-    if (selected || !owned) pick.setEnabled(false);
-    if (!owned) button(this, 780, 674, 240, 80, '뽑으러 가기', () => this.scene.start('Gacha', { mode: 'character' }), 0xdfe6f5, 26);
+    if (this.ctx.mode === 'pick') {
+      const pick = button(this, 1090, 670, 300, 84, !owned ? '미보유' : selected ? '선택 중' : '이 캐릭터로', () => this.pick(), COLORS.green, 32);
+      if (selected || !owned) pick.setEnabled(false);
+    } else {
+      text(this, 1240, 670, '캐릭터는 스테이지를 고른 뒤\n준비 화면에서 바꿀 수 있어요', 17, COLORS.inkDim).setOrigin(1, 0.5).setAlign('right');
+    }
+    if (!owned) button(this, this.ctx.mode === 'pick' ? 800 : 780, 670, 240, 84, '뽑으러 가기', () => this.scene.start('Gacha', { mode: 'character' }), COLORS.purple, 26);
 
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
-      if (ev.code === 'Escape' || ev.code === 'Backspace') this.scene.start('Characters');
+      if (ev.code === 'Escape' || ev.code === 'Backspace') this.back();
       if (ev.code === 'ArrowLeft' || ev.code === 'KeyA') this.go(-1);
       if (ev.code === 'ArrowRight' || ev.code === 'KeyD') this.go(1);
       if (ev.code === 'Enter' || ev.code === 'Space') this.pick();
@@ -116,12 +127,12 @@ export class CharacterInfoScene extends Phaser.Scene {
   private go(dir: 1 | -1): void {
     const n = characters.length;
     const next = characters[(characterIndex(this.id) + dir + n) % n];
-    this.scene.restart({ id: next.id });
+    this.scene.restart({ id: next.id, ...this.ctx });
   }
 
   private pick(): void {
-    if (this.id === saveStore.data.selectedCharacter || !saveStore.ownsCharacter(this.id)) return;
+    if (this.ctx.mode !== 'pick' || this.id === saveStore.data.selectedCharacter || !saveStore.ownsCharacter(this.id)) return;
     saveStore.setCharacter(this.id);
-    this.scene.start('Lobby');
+    this.scene.start('Ready', { stageId: this.ctx.stageId });
   }
 }

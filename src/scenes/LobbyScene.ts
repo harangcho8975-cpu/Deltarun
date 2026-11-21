@@ -1,37 +1,36 @@
 import Phaser from 'phaser';
 import { Sound } from '../audio/Sound';
-import { characterById } from '../data/characters';
+import { characterById, RARITY } from '../data/characters';
 import { stageOrder, stages } from '../data/stages';
+import { cloud } from '../online';
 import { saveStore } from '../save/store';
-import { ECONOMY } from '../config/economy';
 import { todayKey } from './EventScene';
 import { fullscreen } from '../ui/fullscreen';
-import { button, COLORS, text } from '../ui/style';
+import { button, coinPill, COLORS, hex, iconButton, panel, shade, text, topBar } from '../ui/style';
 
 const W = 1280;
 const H = 720;
-const CARD_W = 240;
-const CARD_H = 480;
+const CARD_W = 250;
+const CARD_H = 470;
 const CARD_GAP = 36;
-const CARD_Y = 370;
+const CARD_Y = 390;
 const EDGE = 60;
-/** 스테이지별 미리보기 색 (그림이 생기면 교체) */
-const PREVIEW_COLORS = [0x9fd8ef, 0xf4a261, 0x2b3a67, 0x6aa77a, 0xc77dff];
+/** 스테이지별 카드 색 (그림이 생기면 교체) */
+const STAGE_COLORS = [0x5bbcf0, 0xf08a3c, 0x5a4fcf, 0x4fb36b, 0xc77dff];
 
 /**
- * 로비: 선택한 캐릭터가 가운데에 크게 서 있고, 오른쪽 아래 [플레이]를 누르면
- * 세로로 긴 스테이지 카드가 가로로 늘어선다.
+ * 로비 (쿠키런 오븐브레이크 느낌): 가운데 선택한 캐릭터, 위쪽 프로필·코인, 왼쪽 이벤트·계정,
+ * 아래쪽 캐릭터·장비·뽑기 탭과 큰 [플레이]. 플레이 → 스테이지 카드 → 준비 화면(캐릭터·장비 선택) → 게임.
  */
 export class LobbyScene extends Phaser.Scene {
   private hero!: Phaser.GameObjects.Image;
-  private heroName!: Phaser.GameObjects.Text;
-  private heroTagline!: Phaser.GameObjects.Text;
-  private heroShadow!: Phaser.GameObjects.Ellipse;
-  private heroHint!: Phaser.GameObjects.Text;
+  private heroParts: Phaser.GameObjects.GameObject[] = [];
   private homeUI!: Phaser.GameObjects.Container;
   private stageUI!: Phaser.GameObjects.Container;
+  private settingsUI!: Phaser.GameObjects.Container;
   private strip!: Phaser.GameObjects.Container;
   private stageOpen = false;
+  private openOnStart = false;
   private scrollMin = EDGE;
   private dragStartX = 0;
   private dragStripX = 0;
@@ -40,6 +39,10 @@ export class LobbyScene extends Phaser.Scene {
 
   constructor() {
     super('Lobby');
+  }
+
+  init(data?: { openStages?: boolean }): void {
+    this.openOnStart = !!data?.openStages;
   }
 
   create(): void {
@@ -53,52 +56,45 @@ export class LobbyScene extends Phaser.Scene {
     this.buildHero();
     this.homeUI = this.buildHomeUI();
     this.stageUI = this.buildStageUI().setVisible(false);
+    this.settingsUI = this.buildSettings().setVisible(false);
 
     this.setupKeys();
     this.setupDrag();
+    if (this.openOnStart) this.openStages(false);
   }
 
   // ───────── 캐릭터 (가운데) ─────────
 
   private buildHero(): void {
-    const id = saveStore.data.selectedCharacter;
-    this.hero = this.add.image(W / 2, 596, `char_${id}`).setOrigin(0.5, 1).setDepth(2);
-    this.hero.setDisplaySize(160, 213);
-    // 서 있는 동안 살짝 숨 쉬듯 위아래로 움직인다
+    const c = characterById(saveStore.data.selectedCharacter);
+    const r = RARITY[c.rarity];
+    const glow = this.add.graphics().setDepth(1);
+    for (let i = 5; i >= 1; i--) glow.fillStyle(0xffffff, 0.05 * (6 - i)).fillCircle(W / 2, 470, 70 + i * 26);
+    const shadow = this.add.ellipse(W / 2, 598, 150, 20, 0x000000, 0.25).setDepth(1);
+    this.hero = this.add.image(W / 2, 596, `char_${c.id}`).setOrigin(0.5, 1).setDepth(2);
+    this.hero.setDisplaySize(180, 240);
     this.tweens.add({ targets: this.hero, scaleY: this.hero.scaleY * 1.025, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.heroShadow = this.add.ellipse(W / 2, 598, 130, 16, 0x000000, 0.22).setDepth(1);
+    // 이름 리본
+    const name = text(this, W / 2, 278, c.name, 32, '#ffffff', true).setOrigin(0.5).setStroke('#000000', 6).setDepth(3);
+    const rib = this.add.graphics().setDepth(2);
+    const rw = name.width + 80;
+    rib.fillStyle(shade(r.color, 0.6), 1).fillRoundedRect(W / 2 - rw / 2, 260, rw, 46, 16);
+    rib.fillStyle(r.color, 1).fillRoundedRect(W / 2 - rw / 2, 254, rw, 46, 16);
+    rib.lineStyle(3, 0xffffff, 0.9).strokeRoundedRect(W / 2 - rw / 2, 254, rw, 46, 16);
+    const hint = text(this, W / 2, 324, '눌러서 캐릭터 보기', 16, '#ffffff').setOrigin(0.5).setStroke('#1a1a2e', 4).setDepth(3).setAlpha(0.85);
+    this.heroParts = [glow, shadow, this.hero, rib, name, hint];
 
-    this.heroName = text(this, W / 2, 70, '', 48, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 8).setDepth(3);
-    this.heroTagline = text(this, W / 2, 122, '', 22, '#ffffff').setOrigin(0.5).setStroke('#1a1a2e', 5).setDepth(3);
-    this.heroHint = text(this, W / 2, 158, '캐릭터를 누르면 목록이 열려요', 17, '#ffffff').setOrigin(0.5).setStroke('#1a1a2e', 4).setDepth(3).setAlpha(0.85);
-
-    // 가운데 캐릭터를 누르면 캐릭터 목록(격자)
     this.hero.setInteractive({ useHandCursor: true });
     this.hero.on('pointerup', () => this.openCharacters());
-    this.refreshHero(false);
   }
 
-  private refreshHero(pop: boolean): void {
-    const c = characterById(saveStore.data.selectedCharacter);
-    this.hero.setTexture(`char_${c.id}`).setDisplaySize(160, 213);
-    this.heroName.setText(c.name);
-    this.heroTagline.setText(c.tagline);
-    if (pop) {
-      const sx = this.hero.scaleX;
-      const sy = this.hero.scaleY;
-      this.hero.setScale(sx * 0.92, sy * 0.92);
-      this.tweens.add({ targets: this.hero, scaleX: sx, scaleY: sy, duration: 220, ease: 'Back.easeOut' });
-    }
-  }
-
-  /** 스테이지 카드가 열려 있는 동안은 캐릭터를 숨긴다 */
   private showHero(on: boolean): void {
-    for (const o of [this.hero, this.heroShadow, this.heroName, this.heroTagline, this.heroHint]) o.setVisible(on);
+    for (const o of this.heroParts) (o as unknown as Phaser.GameObjects.Components.Visible).setVisible(on);
   }
 
   private openCharacters(): void {
     if (this.stageOpen) return;
-    this.scene.start('Characters');
+    this.scene.start('Characters', { mode: 'view' });
   }
 
   // ───────── 홈 화면 UI ─────────
@@ -106,52 +102,72 @@ export class LobbyScene extends Phaser.Scene {
   private buildHomeUI(): Phaser.GameObjects.Container {
     const items: Phaser.GameObjects.GameObject[] = [];
 
-    items.push(text(this, 40, 34, `코인 ${saveStore.data.coins}`, 26, '#ffd23f', true).setStroke('#1a1a2e', 5));
+    // 위쪽: 프로필 · 설정 · 코인
+    const pg = this.add.graphics();
+    pg.fillStyle(0x000000, 0.45).fillRoundedRect(18, 14, 360, 66, 33);
+    pg.lineStyle(2, 0xffffff, 0.35).strokeRoundedRect(18, 14, 360, 66, 33);
+    pg.fillStyle(COLORS.yellow, 1).fillCircle(51, 47, 27);
+    pg.lineStyle(3, 0xffffff, 1).strokeCircle(51, 47, 27);
+    items.push(pg);
+    const cleared = stageOrder.filter((id) => saveStore.record(id).cleared).length;
+    const who = cloud?.user && !cloud.user.anonymous ? (cloud.user.label ?? '플레이어') : '게스트';
+    items.push(
+      text(this, 51, 47, `${cleared}`, 24, '#ffffff', true).setOrigin(0.5).setStroke('#8a5a00', 4),
+      text(this, 92, 28, who.length > 22 ? who.slice(0, 21) + '…' : who, 20, '#ffffff', true),
+      text(this, 92, 54, `클리어 ${cleared} / ${stageOrder.length} 스테이지`, 15, '#ffd23f'),
+    );
+    items.push(coinPill(this, 1256, 46, saveStore.data.coins).container);
+    items.push(iconButton(this, 1000, 40, 'settings', '', 0x6b7190, () => this.settingsUI.setVisible(true), false, 56));
 
-    // 설정: 오른쪽 위
-    const s = saveStore.data.settings;
-    const label = (k: 'bgm' | 'sfx') => `${k === 'bgm' ? '배경음' : '효과음'} ${s[k] ? '켜짐' : '꺼짐'}`;
-    const toggle = (x: number, k: 'bgm' | 'sfx') => {
-      const b = button(this, x, 46, 140, 48, label(k), () => {
-        saveStore.setSetting(k, !s[k]);
-        (b.list[1] as Phaser.GameObjects.Text).setText(label(k));
-      }, 0xdfe6f5, 17);
-      items.push(b);
-    };
-    toggle(1000, 'bgm');
-    toggle(1150, 'sfx');
-    items.push(button(this, 1000, 104, 140, 48, '계정', () => this.scene.start('Account'), 0xdfe6f5, 17));
-    if (fullscreen.supported() && !fullscreen.standalone()) {
-      items.push(button(this, 1150, 104, 140, 48, '전체화면 (F)', () => void fullscreen.toggle(), 0xdfe6f5, 17));
-    }
+    // 왼쪽 세로 메뉴
+    items.push(iconButton(this, 66, 180, 'event', '이벤트', COLORS.pink, () => this.scene.start('Event'), saveStore.canClaimAttendance(todayKey())));
+    items.push(iconButton(this, 66, 310, 'account', '계정', COLORS.blue, () => this.scene.start('Account')));
 
-
-    // 왼쪽 아래: 장비·뽑기
-    const equipped = saveStore.data.equipment.equipped.length;
-    items.push(button(this, 130, 640, 200, 80, `장비  ${equipped}/${ECONOMY.equipSlots}`, () => this.scene.start('Equipment'), 0xdfe6f5, 26));
-    items.push(button(this, 570, 640, 200, 80, '이벤트', () => this.scene.start('Event'), 0xdfe6f5, 26));
-    if (saveStore.canClaimAttendance(todayKey())) {
-      items.push(this.add.circle(660, 604, 12, 0xe74c3c).setStrokeStyle(3, 0xffffff)); // 받을 보상이 있다는 표시
-    }
-    items.push(button(this, 350, 640, 200, 80, '뽑기', () => this.scene.start('Gacha'), 0xdfe6f5, 26));
+    // 아래쪽 탭 바
+    const bar = this.add.graphics();
+    bar.fillStyle(COLORS.bar, 0.85).fillRoundedRect(-30, 590, 480, 160, 30);
+    bar.lineStyle(3, 0xffffff, 0.25).strokeRoundedRect(-30, 590, 480, 160, 30);
+    items.push(bar);
+    items.push(iconButton(this, 80, 636, 'character', '캐릭터', COLORS.yellow, () => this.openCharacters()));
+    items.push(iconButton(this, 210, 636, 'equip', '장비', COLORS.green, () => this.scene.start('Equipment', { mode: 'view' })));
+    items.push(iconButton(this, 340, 636, 'gacha', '뽑기', COLORS.purple, () => this.scene.start('Gacha')));
 
     // 오른쪽 아래 [플레이]
-    items.push(button(this, 1090, 640, 320, 100, '플레이  ▶', () => this.openStages(), COLORS.accent, 42));
+    items.push(button(this, 1070, 632, 360, 120, '플레이 ▶', () => this.openStages(), COLORS.yellow, 46));
 
     if (!fullscreen.supported() && !fullscreen.standalone()) {
       // iPhone Safari: 전체화면 API가 없다
-      items.push(text(this, 40, 700, '전체화면: 공유 → "홈 화면에 추가"로 열어 주세요', 17, '#ffffff').setOrigin(0, 1).setStroke('#1a1a2e', 4));
+      items.push(text(this, 700, 704, '전체화면: 공유 → "홈 화면에 추가"로 열어 주세요', 16, '#ffffff').setOrigin(0.5, 1).setStroke('#1a1a2e', 4));
     }
     return this.add.container(0, 0, items).setDepth(10);
+  }
+
+  private buildSettings(): Phaser.GameObjects.Container {
+    const dim = this.add.rectangle(0, 0, W, H, 0x000000, 0.55).setOrigin(0).setInteractive();
+    const p = panel(this, 400, 170, 480, 400, '설정');
+    const s = saveStore.data.settings;
+    const label = (k: 'bgm' | 'sfx') => `${k === 'bgm' ? '배경음' : '효과음'}  ${s[k] ? '켜짐' : '꺼짐'}`;
+    const items: Phaser.GameObjects.GameObject[] = [dim, p];
+    const toggle = (y: number, k: 'bgm' | 'sfx') => {
+      const b = button(this, 640, y, 320, 70, label(k), () => {
+        saveStore.setSetting(k, !s[k]);
+        (b.list[1] as Phaser.GameObjects.Text).setText(label(k));
+      }, COLORS.green, 26);
+      items.push(b);
+    };
+    toggle(250, 'bgm');
+    toggle(340, 'sfx');
+    if (fullscreen.supported() && !fullscreen.standalone()) {
+      items.push(button(this, 640, 430, 320, 70, '전체화면 (F)', () => void fullscreen.toggle(), COLORS.blue, 26));
+    }
+    items.push(button(this, 640, 520, 200, 64, '닫기', () => this.settingsUI.setVisible(false), COLORS.yellow, 26));
+    return this.add.container(0, 0, items).setDepth(50);
   }
 
   // ───────── 스테이지 카드 (세로로 긴 카드가 가로로 배열) ─────────
 
   private buildStageUI(): Phaser.GameObjects.Container {
-    const dim = this.add.rectangle(0, 0, W, H, COLORS.panel, 0.62).setOrigin(0);
-    const title = text(this, W / 2, 56, '스테이지 선택', 42, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 7);
-    const back = button(this, 120, 56, 180, 64, '← 뒤로', () => this.closeStages(), 0xdfe6f5, 24);
-
+    const dim = this.add.rectangle(0, 0, W, H, COLORS.panel, 0.55).setOrigin(0);
     this.strip = this.add.container(0, 0);
     const n = stageOrder.length;
     const total = n * CARD_W + (n - 1) * CARD_GAP;
@@ -163,53 +179,62 @@ export class LobbyScene extends Phaser.Scene {
       this.strip.add(this.card(x, CARD_Y, id, i));
     });
     this.strip.setData('home', 0);
-    return this.add.container(0, 0, [dim, title, back, this.strip]).setDepth(20);
+    // 위쪽 바: 만들어진 객체들을 모아 스테이지 화면과 함께 보이고 숨긴다
+    const head = topBar(this, '스테이지 선택', () => this.closeStages(), saveStore.data.coins).objects;
+    return this.add.container(0, 0, [dim, this.strip, ...head]).setDepth(20);
   }
 
   private card(x: number, y: number, id: string, i: number): Phaser.GameObjects.Container {
     const unlocked = saveStore.isUnlocked(stageOrder, id);
     const rec = saveStore.record(id);
+    const color = STAGE_COLORS[i % STAGE_COLORS.length];
     const g = this.add.graphics();
-    g.fillStyle(unlocked ? 0xffffff : COLORS.locked, unlocked ? 0.95 : 0.85).fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 20);
-    g.lineStyle(4, unlocked ? COLORS.accent : 0x3d4157, 1).strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 20);
-
-    const preview = this.add.graphics();
-    preview.fillStyle(PREVIEW_COLORS[i % PREVIEW_COLORS.length], unlocked ? 1 : 0.45).fillRoundedRect(-CARD_W / 2 + 14, -CARD_H / 2 + 52, CARD_W - 28, 180, 12);
+    const L = -CARD_W / 2;
+    const T = -CARD_H / 2;
+    g.fillStyle(0x000000, 0.3).fillRoundedRect(L + 4, T + 10, CARD_W, CARD_H, 24);
+    g.fillStyle(unlocked ? COLORS.cream : 0x6b6f80, 1).fillRoundedRect(L, T, CARD_W, CARD_H, 24);
+    // 위쪽 그림 자리 (스테이지 색)
+    g.fillStyle(unlocked ? color : 0x4a4e60, 1).fillRoundedRect(L + 12, T + 12, CARD_W - 24, 220, 16);
+    g.fillStyle(0xffffff, 0.18).fillRoundedRect(L + 12, T + 12, CARD_W - 24, 90, { tl: 16, tr: 16, bl: 0, br: 0 });
+    g.lineStyle(5, unlocked ? COLORS.brown : 0x3d4157, 1).strokeRoundedRect(L, T, CARD_W, CARD_H, 24);
 
     const items: Phaser.GameObjects.GameObject[] = [
       g,
-      preview,
-      text(this, 0, -CARD_H / 2 + 28, `STAGE ${i + 1}`, 22, unlocked ? '#f5a623' : '#aab0c4', true).setOrigin(0.5),
-      text(this, 0, -CARD_H / 2 + 142, `${i + 1}`, 96, '#ffffff', true).setOrigin(0.5).setAlpha(unlocked ? 0.9 : 0.5),
-      text(this, 0, 36, stages[id].name, 28, unlocked ? '#1a1a2e' : '#d3d7e6', true).setOrigin(0.5),
+      text(this, 0, T + 40, `STAGE ${i + 1}`, 22, '#ffffff', true).setOrigin(0.5).setStroke(hex(shade(color, 0.45)), 5),
+      text(this, 0, T + 140, `${i + 1}`, 110, '#ffffff', true).setOrigin(0.5).setAlpha(unlocked ? 0.95 : 0.4).setStroke(hex(shade(color, 0.5)), 8),
+      text(this, 0, T + 268, stages[id].name, 28, unlocked ? '#4a3520' : '#d3d7e6', true).setOrigin(0.5),
     ];
     if (unlocked) {
       items.push(
-        text(this, 0, 92, '★'.repeat(rec.bestStars) + '☆'.repeat(3 - rec.bestStars), 40, '#f5a623').setOrigin(0.5),
-        text(this, 0, 146, rec.bestScore ? `최고 ${rec.bestScore.toLocaleString()}점` : '아직 기록 없음', 20, '#4a5068').setOrigin(0.5),
-        text(this, 0, 198, '눌러서 시작', 18, '#8a90a8').setOrigin(0.5),
+        text(this, 0, T + 318, '★'.repeat(rec.bestStars) + '☆'.repeat(3 - rec.bestStars), 40, '#f5a623').setOrigin(0.5).setStroke('#8a5a00', 3),
+        text(this, 0, T + 366, rec.bestScore ? `최고 ${rec.bestScore.toLocaleString()}점` : '아직 기록 없음', 19, '#7a6048').setOrigin(0.5),
       );
+      const chip = this.add.graphics();
+      chip.fillStyle(shade(COLORS.green, 0.6), 1).fillRoundedRect(-80, T + 404, 160, 46, 18);
+      chip.fillStyle(COLORS.green, 1).fillRoundedRect(-80, T + 398, 160, 46, 18);
+      chip.lineStyle(3, 0xffffff, 0.9).strokeRoundedRect(-80, T + 398, 160, 46, 18);
+      items.push(chip, text(this, 0, T + 421, '선택', 22, '#ffffff', true).setOrigin(0.5).setStroke('#1e6b33', 4));
     } else {
       items.push(
-        text(this, 0, 110, '잠김', 34, '#e8eaf2', true).setOrigin(0.5),
-        text(this, 0, 168, `STAGE ${i}을 클리어하면\n열려요`, 18, '#e8eaf2').setOrigin(0.5).setAlign('center'),
+        text(this, 0, T + 330, '잠김', 32, '#e8eaf2', true).setOrigin(0.5),
+        text(this, 0, T + 390, `STAGE ${i}을 클리어하면\n열려요`, 18, '#e8eaf2').setOrigin(0.5).setAlign('center'),
       );
     }
 
     const zone = this.add.zone(0, 0, CARD_W, CARD_H).setInteractive({ useHandCursor: unlocked });
     zone.on('pointerup', () => {
-      if (this.dragMoved < 12) this.startStage(id);
+      if (this.dragMoved < 12) this.selectStage(id);
     });
     items.push(zone);
     return this.add.container(x, y, items);
   }
 
-  private openStages(): void {
+  private openStages(animate = true): void {
     if (this.stageOpen) return;
     this.stageOpen = true;
     this.homeUI.setVisible(false);
     this.showHero(false);
-    this.stageUI.setVisible(true).setAlpha(0);
+    this.stageUI.setVisible(true).setAlpha(animate ? 0 : 1);
     this.strip.x = this.strip.getData('home') as number;
     const unlockedIdx = stageOrder.reduce((last, id, i) => (saveStore.isUnlocked(stageOrder, id) ? i : last), 0);
     // 카드가 많아 스크롤되는 경우, 지금 열린 마지막 스테이지가 보이게 맞춘다
@@ -217,6 +242,7 @@ export class LobbyScene extends Phaser.Scene {
       const target = EDGE - unlockedIdx * (CARD_W + CARD_GAP) + (W - EDGE * 2 - CARD_W) / 2;
       this.strip.x = Phaser.Math.Clamp(target, this.scrollMin - EDGE, 0);
     }
+    if (!animate) return;
     const finalX = this.strip.x;
     this.strip.x = finalX + 220;
     this.tweens.add({ targets: this.stageUI, alpha: 1, duration: 200 });
@@ -231,9 +257,10 @@ export class LobbyScene extends Phaser.Scene {
     this.showHero(true);
   }
 
-  private startStage(id: string): void {
+  /** 스테이지를 고르면 준비 화면(캐릭터·장비 선택)으로 */
+  private selectStage(id: string): void {
     if (!this.stageOpen || !saveStore.isUnlocked(stageOrder, id)) return;
-    this.scene.start('Game', { stageId: id });
+    this.scene.start('Ready', { stageId: id });
   }
 
   // ───────── 입력 ─────────
@@ -241,20 +268,24 @@ export class LobbyScene extends Phaser.Scene {
   private setupKeys(): void {
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       if (ev.code === 'KeyF') void fullscreen.toggle();
+      if (this.settingsUI.visible) {
+        if (ev.code === 'Escape') this.settingsUI.setVisible(false);
+        return;
+      }
       if (!this.stageOpen) {
         if (ev.code === 'Enter' || ev.code === 'Space') this.openStages();
         if (ev.code === 'KeyC') this.openCharacters();
-        if (ev.code === 'KeyE') this.scene.start('Equipment');
+        if (ev.code === 'KeyE') this.scene.start('Equipment', { mode: 'view' });
         if (ev.code === 'KeyG') this.scene.start('Gacha');
         if (ev.code === 'KeyV') this.scene.start('Event');
         return;
       }
       if (ev.code === 'Escape' || ev.code === 'Backspace') this.closeStages();
       const n = Number(ev.key);
-      if (n >= 1 && n <= stageOrder.length) this.startStage(stageOrder[n - 1]);
+      if (n >= 1 && n <= stageOrder.length) this.selectStage(stageOrder[n - 1]);
       if (ev.code === 'Enter') {
         const open = stageOrder.filter((id) => saveStore.isUnlocked(stageOrder, id));
-        this.startStage(open[open.length - 1]);
+        this.selectStage(open[open.length - 1]);
       }
     });
   }
