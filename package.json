@@ -10,7 +10,8 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "maps": "tsx scripts/convert-tiled.ts",
-    "replays": "tsx scripts/record-replays.ts"
+    "replays": "tsx scripts/record-replays.ts",
+    "cloud:check": "tsx scripts/cloud-check.mts"
   },
   "dependencies": {
     "lil-gui": "^0.20.0",
