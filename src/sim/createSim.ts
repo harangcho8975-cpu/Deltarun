@@ -62,6 +62,7 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
     outcome: 'playing',
     failReason: null,
     cameraX,
+    scrollDx: 0,
     player: {
       x: startPlayerX,
       y: cfg.groundY,

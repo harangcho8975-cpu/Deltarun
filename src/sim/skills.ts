@@ -86,6 +86,8 @@ export function updateDrops(s: SimState, events: SimEvent[]): void {
   const pb = playerBox(s);
   const keep: DropCoin[] = [];
   for (const c of s.drops) {
+    // 코인은 화면 기준으로 움직인다: 화면이 앞으로 간 만큼 같이 간다 (가만히 두면 화면 왼쪽으로 빠르게 쓸려 가지 않게)
+    c.x += s.scrollDx;
     if (c.delay > 0) {
       c.delay--;
       keep.push(c);

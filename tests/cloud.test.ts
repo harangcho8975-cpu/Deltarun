@@ -234,9 +234,9 @@ describe('FirebaseBackend (가짜 SDK)', () => {
     expect(r.user.uid).toBe('existing');
   });
 
-  it('다른 오류는 그대로 던진다', async () => {
+  it('다른 오류는 읽을 수 있는 문구로 바꿔 던진다', async () => {
     const f = fakeSdk({ current: { uid: 'g', isAnonymous: true }, linkError: { code: 'auth/popup-closed-by-user' } });
-    await expect(new FirebaseBackend({}, async () => f.sdk).signInGoogle()).rejects.toMatchObject({ code: 'auth/popup-closed-by-user' });
+    await expect(new FirebaseBackend({}, async () => f.sdk).signInGoogle()).rejects.toThrow('(auth/popup-closed-by-user)');
   });
 
   it('이미 구글로 로그인했다면 팝업을 띄우지 않는다', async () => {

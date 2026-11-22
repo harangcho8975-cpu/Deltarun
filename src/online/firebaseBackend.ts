@@ -27,14 +27,18 @@ const toUser = (u: FbUser): CloudUser => ({
 export function explainAuthError(e: unknown): string {
   const code = (e as { code?: string })?.code ?? '';
   const map: Record<string, string> = {
-    'auth/popup-closed-by-user': '로그인 창을 닫았어요',
+    'auth/popup-closed-by-user': '로그인 창이 닫혔어요. 홈 화면 앱이나 카카오톡·인스타 안의 브라우저라면 Chrome·Safari로 주소를 열어 다시 해 보세요',
     'auth/cancelled-popup-request': '로그인 창이 이미 열려 있어요',
     'auth/popup-blocked': '팝업이 막혔어요. 브라우저의 팝업 차단을 풀어 주세요',
     'auth/unauthorized-domain': '이 주소가 Firebase의 승인된 도메인에 없어요 (Authentication → 설정 → 승인된 도메인)',
     'auth/operation-not-allowed': 'Firebase 콘솔에서 이 로그인 방법이 꺼져 있어요',
     'auth/network-request-failed': '인터넷 연결을 확인해 주세요',
+    'auth/operation-not-supported-in-this-environment': '이 브라우저에서는 로그인 창을 열 수 없어요. Chrome·Safari로 열어 주세요',
+    'auth/web-storage-unsupported': '브라우저 저장소가 꺼져 있어요 (비공개 창이면 일반 창으로 열어 주세요)',
+    'auth/internal-error': '로그인 중 오류가 났어요. 다른 브라우저로 시도해 주세요',
   };
-  return map[code] ?? (e instanceof Error ? e.message : String(e));
+  const msg = map[code] ?? (e instanceof Error ? e.message : String(e));
+  return code ? `${msg} (${code})` : msg;
 }
 
 export class FirebaseBackend implements CloudBackend {
@@ -84,7 +88,8 @@ export class FirebaseBackend implements CloudBackend {
           return { user: toUser(r.user), switched: true };
         }
       }
-      throw e;
+      // 화면에 그대로 보여 줄 수 있게 사람이 읽을 문구로 바꾼다 (원래 코드도 괄호로 붙는다)
+      throw new Error(explainAuthError(e));
     }
   }
 

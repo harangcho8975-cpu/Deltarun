@@ -27,7 +27,8 @@ export function step(s: SimState, input: InputFrame): SimEvent[] {
 
   // 2. 스크롤
   const speed = s.stage.speed * (s.effects.boost > 0 ? cfg.effects.boostMultiplier : 1) * jevilSpeedMul(s);
-  s.cameraX += speed / TICK_RATE;
+  s.scrollDx = speed / TICK_RATE;
+  s.cameraX += s.scrollDx;
   p.x = s.cameraX + cfg.playerScreenX;
   s.distance = distanceMeters(s.cameraX);
 

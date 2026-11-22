@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { cloud, cloudEnabled } from '../online';
+import { fullscreen } from '../ui/fullscreen';
 import { saveStore } from '../save/store';
 import { button, COLORS, panel, text, topBar } from '../ui/style';
 
@@ -61,7 +62,9 @@ export class AccountScene extends Phaser.Scene {
           ? `오류: ${cloud.lastError}\n(인터넷 연결, 또는 Firebase 콘솔의 로그인 방법·Firestore 설정을 확인해 주세요)`
           : cloud.user && !cloud.user.anonymous
             ? '구글 계정으로 저장 중이에요. 다른 기기에서도 같은 구글 계정으로 로그인하면 이어서 할 수 있어요.'
-            : '게스트로 저장 중이에요. [구글로 로그인]을 누르면 지금까지의 진행이 구글 계정에 연결돼서 다른 기기에서도 이어서 할 수 있어요. 이미 저장이 있는 구글 계정이면 그 저장으로 바뀌어요.',
+            : fullscreen.standalone()
+              ? '홈 화면 앱에서는 구글 로그인 창이 제대로 돌아오지 않을 수 있어요. 안 되면 Chrome·Safari에서 주소를 열어 로그인해 주세요.'
+              : '게스트로 저장 중이에요. [구글로 로그인]을 누르면 지금까지의 진행이 구글 계정에 연결돼서 다른 기기에서도 이어서 할 수 있어요. 이미 저장이 있는 구글 계정이면 그 저장으로 바뀌어요.',
       );
       const busy = cloud.status === 'syncing' || cloud.status === 'connecting';
       googleBtn.setEnabled(!busy && !!cloud.user?.anonymous);

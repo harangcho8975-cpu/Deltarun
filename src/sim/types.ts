@@ -120,6 +120,8 @@ export interface SimState {
   outcome: Outcome;
   failReason: 'hp' | 'fall' | null;
   cameraX: number;
+  /** 이번 틱에 화면이 앞으로 간 거리(px). 대능력 코인이 화면과 함께 움직이는 데 쓴다 */
+  scrollDx: number;
   player: PlayerSim;
   /** 남은 틱 */
   effects: { magnet: number; giant: number; boost: number };
