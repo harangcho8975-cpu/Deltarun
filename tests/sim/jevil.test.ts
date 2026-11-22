@@ -181,6 +181,37 @@ describe('제빌 대능력', () => {
   });
 });
 
+describe('제빌 무적', () => {
+  it('상자(소능력)를 쓴 직후 1초 무적', () => {
+    const s = jv();
+    s.debugInvincible = false;
+    go(s, 1, JUMP);
+    go(s, 5, NONE);
+    expect(s.player.invulnTicks).toBe(0);
+    go(s, 1, SLIDE);
+    expect(s.jevil!.stacks).toBe(1);
+    expect(s.player.invulnTicks).toBe(J.invulnAfterMinorTicks - 1 + 1); // 이번 틱에 걸렸다
+    expect(J.invulnAfterMinorTicks).toBe(60);
+  });
+
+  it('대능력 발동 중에는 장애물에 맞지 않고, 끝난 뒤 3초 무적 (그 사이 맞지 않는다)', () => {
+    const obstacles = Array.from({ length: 60 }, (_, i) => ({ type: 'obstacle_high' as const, x: 1200 + i * 400 }));
+    const s = jv({ obstacles });
+    s.debugInvincible = false;
+    toUltimate(s);
+    const during = go(s, J.boxPhaseTicks + J.dashTicks + J.flightTicks + J.judgementTicks, NONE);
+    expect(of(during, 'hit')).toHaveLength(0);
+    expect(s.jevil!.phase).toBe(0);
+    expect(s.player.invulnTicks).toBeGreaterThan(J.afterUltimateTicks - 5);
+    expect(J.afterUltimateTicks).toBe(180);
+    const after = go(s, J.afterUltimateTicks - 5, NONE);
+    expect(of(after, 'hit')).toHaveLength(0);
+    // 무적이 끝나면 다시 맞는다
+    const later = go(s, 400, NONE);
+    expect(of(later, 'hit').length).toBeGreaterThan(0);
+  });
+});
+
 describe('제빌 결정성', () => {
   const inputs = (t: number): InputFrame => ({
     jumpPressed: t % 97 === 0,

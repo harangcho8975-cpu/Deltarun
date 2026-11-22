@@ -270,7 +270,7 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
 });
 
 describe('소능력·대능력 직후 무적', () => {
-  it('소능력을 쓴 직후 무적 30틱', () => {
+  it('소능력을 쓴 직후 무적 60틱(1초)', () => {
     const s = skillSim();
     s.debugInvincible = false; // 무적 디버그를 끄고 실제 무적시간을 본다
     runTagged(s, 239);
@@ -278,7 +278,7 @@ describe('소능력·대능력 직후 무적', () => {
     runTagged(s, 1); // 240틱째 소능력 발동
     expect(s.skill!.count).toBe(1);
     expect(s.player.invulnTicks).toBe(cfg.skills.chaosKing.invulnAfterMinorTicks);
-    expect(cfg.skills.chaosKing.invulnAfterMinorTicks).toBe(30);
+    expect(cfg.skills.chaosKing.invulnAfterMinorTicks).toBe(60);
   });
 
   it('대능력이 끝난 직후 무적 180틱·3초 (시작할 때는 아님)', () => {

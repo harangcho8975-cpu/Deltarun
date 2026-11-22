@@ -59,7 +59,7 @@ export const gameConfig = {
       ultimateEvery: 3, // 3번째 발동은 소능력 대신 대능력
       ultimateTicks: 360, // 대능력 6초
       coinsPerObstacle: 10, // 박스가 부순 장애물 하나당 적립 코인
-      invulnAfterMinorTicks: 30, // 소능력 발동 직후 무적 (0.5초)
+      invulnAfterMinorTicks: 60, // 소능력 발동 직후 무적 (1초)
       invulnAfterUltimateTicks: 180, // 대능력이 끝난 직후 무적 (3초)
       // 대능력이 끝나면 쌓인 코인이 하나하나 떨어져 바닥에서 튕기고, 플레이어가 직접 주워야 지급된다
       drop: {
@@ -123,7 +123,9 @@ export const gameConfig = {
       scythe: { swingTicks: 18, reach: 440, height: 440 }, // 낫 판정: 앞으로 440px, 위아래 440px
       judgementTicks: 180, // 심판의 낫 3초
       bigScythe: { startY: -360, endY: 560, flashAtY: 360 }, // 낫 중심 y. 화면 절반(360)을 지날 때 섬광
-      afterUltimateTicks: 60, // 끝난 뒤 1초 동안 무적 + 구멍 위 바닥
+      invulnAfterMinorTicks: 60, // 상자(소능력)를 쓴 직후 무적 (1초)
+      afterUltimateTicks: 180, // 대능력이 끝난 뒤 3초 동안 무적 (발동 중에는 계속 무적)
+      groundGraceAfterUltimateTicks: 60, // 끝난 뒤 1초 동안은 구멍 위도 바닥
     },
   },
 
@@ -138,7 +140,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 15;
+export const SIM_VERSION = 16;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {

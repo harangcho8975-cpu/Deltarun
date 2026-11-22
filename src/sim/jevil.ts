@@ -145,6 +145,7 @@ export function updateJevil(s: SimState, from: number, to: number, events: SimEv
       // 소능력: 공중에서 슬라이드를 누르는 순간 스택 1개로 상자
       if (slidePressed && isAir(p.state) && j.stacks > 0) {
         j.stacks--;
+        p.invulnTicks = Math.max(p.invulnTicks, J.invulnAfterMinorTicks); // 소능력 직후 무적
         spawnBox(j, cfg.playerScreenX + J.box.minorAhead, Math.max(120, p.y - J.box.minorAbove), false, events);
       }
       j.timer--;
@@ -200,7 +201,7 @@ export function updateJevil(s: SimState, from: number, to: number, events: SimEv
         j.stacks += J.stacksPerUltimate;
         j.timer = J.ultimateIntervalTicks;
         p.invulnTicks = Math.max(p.invulnTicks, J.afterUltimateTicks);
-        s.boostGroundGrace = Math.max(s.boostGroundGrace, J.afterUltimateTicks);
+        s.boostGroundGrace = Math.max(s.boostGroundGrace, J.groundGraceAfterUltimateTicks);
         events.push({ type: 'jevilPhase', phase: 0 });
       }
       break;
