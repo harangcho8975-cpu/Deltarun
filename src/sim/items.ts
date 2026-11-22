@@ -41,7 +41,9 @@ export function tickTimers(s: SimState, events: SimEvent[]): void {
 
 /** 4장 8번: 자석 */
 export function applyMagnet(s: SimState, from: number, to: number): void {
-  const timed = s.effects.magnet > 0;
+  // 자석 아이템, 또는 카오스 킹·제빌의 대능력 중에도 자석과 같은 범위로 끌어당긴다
+  const ability = (s.skill?.id === 'chaosKing' && s.skill.ultimateTicks > 0) || (!!s.jevil && s.jevil.phase > 0);
+  const timed = s.effects.magnet > 0 || ability;
   const radius = Math.max(timed ? cfg.effects.magnetRadius : 0, s.mods.passiveMagnetRadius);
   const p = s.player;
   const px = p.x + cfg.hitbox.run.w / 2;

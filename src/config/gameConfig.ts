@@ -94,6 +94,7 @@ export const gameConfig = {
     jevil: {
       startStacks: 2,
       stacksPerUltimate: 2,
+      maxStacks: 2, // 상자 스택은 2개까지만 모인다
       ultimateIntervalTicks: 1200, // 20초
       box: {
         size: 72,
@@ -118,9 +119,10 @@ export const gameConfig = {
       dashSpeedMul: 2, // 돌진 중 스크롤 속도 배율
       flightTicks: 420, // 비행 7초
       // 돌진·비행 공통: 누르고 있으면 위로, 떼면 아래로 (속도가 부드럽게 바뀐다)
-      flightUpAccel: 2600, // px/s²
-      flightGravity: 2200,
-      flightMaxVy: 600,
+      flightUpAccel: 3800, // px/s²  (위아래 움직임을 빠르게)
+      flightGravity: 3300,
+      flightMaxVy: 900,
+      flightSpeedMul: 1.5, // 비행 중 스크롤 속도 배율
       ceilingY: 150, // 비행 중 발 y의 최소값 (화면 위로 나가지 않게)
       scythe: { swingTicks: 18, reach: 440, height: 440 }, // 낫 판정: 앞으로 440px, 위아래 440px
       judgementTicks: 180, // 심판의 낫 3초
@@ -142,7 +144,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 17;
+export const SIM_VERSION = 18;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {

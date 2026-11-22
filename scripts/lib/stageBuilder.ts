@@ -56,6 +56,7 @@ export class StageBuilder {
   private zones: Zone[] = [];
   private bears: number[] = [];
   private sections: { name: string; x: number }[] = [];
+  private fields: { from: number; to: number }[] = [];
 
   constructor(private spec: StageSpec) {}
 
@@ -115,10 +116,28 @@ export class StageBuilder {
     return this;
   }
 
+  /** 부스터 중에 그냥 달려서 건너는 구멍 (부스터가 구멍 위를 바닥으로 만든다: 조작 없음) */
+  boostHole(width: number, after = 400): this {
+    this.holes.push([this.x, this.x + width]);
+    this.x += width + after;
+    return this;
+  }
+
   /** 아이템 (달리는 높이에 놓는다) */
   item(type: ItemType, after = 200): this {
     this.items.push({ type, x: this.x });
     this.x += after;
+    return this;
+  }
+
+  /**
+   * 자석 젤리밭: 자석 아이템 뒤로 평지 len 동안 길 위쪽에 젤리 줄 3개.
+   * 자석(또는 능력 중 자력) 없이는 다 먹을 수 없다.
+   */
+  magnetField(len = 2400): this {
+    this.items.push({ type: 'item_magnet', x: this.x });
+    this.fields.push({ from: this.x + 260, to: this.x + len });
+    this.x += len + 200;
     return this;
   }
 
@@ -197,14 +216,16 @@ export class StageBuilder {
   }
 
   /** 계획대로 base 상태에서 x까지 달려 본다. 맞거나 떨어지면 null */
-  private static tryRun(base: SimState, plan: Plan, untilFoot: number): SimState | null {
+  private static tryRun(base: SimState, plan: Plan, untilFoot: number, rec?: { x: number; y: number; air: boolean }[]): SimState | null {
     const s = cloneSim(base);
     // 이미 지난 누름을 다시 누르지 않도록 지금 위치에서 시작한다
     const input = StageBuilder.runner(plan, footX(s.player));
     let guard = 0;
     while (s.outcome === 'playing' && guard++ < 20000) {
       const ev = step(s, input(s));
+      if (ev.some((e) => e.type === 'failed' && e.reason === 'hp')) throw new Error(`체력이 바닥남 (x = ${Math.round(s.player.x)}): 회복 물약을 더 넣거나 구간을 줄이세요`);
       if (ev.some((e) => e.type === 'hit' || e.type === 'failed')) return null;
+      rec?.push({ x: footX(s.player), y: s.player.y - BODY_C.run, air: !(s.player.state === 'run' || s.player.state === 'slide') });
       if (s.player.y > cfg.groundY + 1 && s.player.state !== 'fly') {
         // 바닥선 아래 = 구멍에 빠지는 중
         return null;
@@ -234,9 +255,10 @@ export class StageBuilder {
         lastLand = s1;
         continue;
       }
-      const delays = a.kind === 'double' ? [17, 15, 19, 13, 21, 11, 23, 9, 25] : [undefined];
+      const delays = a.kind === 'double' ? [7, 9, 11, 13, 15, 17, 19, 21, 23] : [undefined];
       let chosen: Press | null = null;
       let after: SimState | null = null;
+      let bestAsym = Infinity;
       for (const delay of delays) {
         const ok: { x: number; s: SimState }[] = [];
         for (let px = a.start - 520; px <= a.start + 40; px += 4) {
@@ -248,12 +270,23 @@ export class StageBuilder {
         if (ok.length) {
           // 가능한 범위의 가운데: 너무 이르지도 늦지도 않은, 가장 넉넉한 시점
           const mid = ok[Math.floor(ok.length / 2)];
-          chosen = { x: mid.x, delay };
-          after = mid.s;
-          break;
+          if (delay === undefined) {
+            chosen = { x: mid.x, delay };
+            after = mid.s;
+            break;
+          }
+          // 2단 점프는 궤적이 좌우 대칭 포물선에 가장 가까운 2단 시점을 고른다 (젤리 길을 대칭으로 깔기 위해)
+          const rec: { x: number; y: number; air: boolean }[] = [];
+          StageBuilder.tryRun(base, { presses: [...plan.presses, { x: mid.x, delay }], slides: plan.slides }, a.end + cfg.hitbox.run.w, rec);
+          const asym = symmetricFit(firstAirRun(rec)).dev;
+          if (asym < bestAsym) {
+            bestAsym = asym;
+            chosen = { x: mid.x, delay };
+            after = mid.s;
+          }
         }
       }
-      if (!chosen || !after) throw new Error(`${this.spec.id}: x=${a.start} (${a.kind}) 를 넘을 시점이 없음`);
+      if (!chosen || !after) throw new Error(`${this.spec.id}: ${this.where(a.start)} x=${a.start} (${a.kind}) 를 넘을 시점이 없음 (앞 장애물과 너무 가까움)`);
       plan.presses.push(chosen);
       base = after;
       lastLand = footX(after.player);
@@ -278,6 +311,13 @@ export class StageBuilder {
     return { pts, final: s };
   }
 
+  /** 오류 메시지용: 이 x가 어느 스테이지 구간의 몇 px 지점인지 */
+  private where(x: number): string {
+    let s = this.sections[0];
+    for (const sec of this.sections) if (x >= sec.x) s = sec;
+    return s ? `[${s.name} +${Math.round(x - s.x)}px]` : '';
+  }
+
   private styleAt(x: number): JellyStyle {
     let st: JellyStyle = 'jelly';
     for (const z of this.zones) if (x >= z.from) st = z.style;
@@ -290,12 +330,39 @@ export class StageBuilder {
     const { pts } = this.trace(plan);
     const goal = this.stageData().goalX;
 
-    // 1) 궤적을 따라 호 길이 SPACING마다 점
+    // 1) 젤리 길: 실제 궤적. 단, 2단 점프 구간은 좌우 대칭 포물선으로 바꾼다 (몸에 닿는 범위 안일 때만)
+    const route = pts.map((p) => ({ ...p }));
+    let symArcs = 0;
+    const asymArcs: string[] = [];
+    for (let i = 0; i < route.length; ) {
+      if (!route[i].air) {
+        i++;
+        continue;
+      }
+      let j = i;
+      while (j < route.length && route[j].air) j++;
+      const seg = route.slice(i, j);
+      const peak = Math.min(...seg.map((p) => p.y));
+      const base0 = route[Math.max(0, i - 1)].y;
+      if (base0 - peak > 200) {
+        // 2단 점프
+        const fit = symmetricFit(seg, base0, route[Math.min(route.length - 1, j)].y);
+        if (fit.dev <= 54) {
+          for (let k = i; k < j; k++) route[k].y = fit.at(route[k].x);
+          symArcs++;
+        } else {
+          asymArcs.push(`${this.where(seg[0].x)} x=${Math.round(seg[0].x)} 차이 ${Math.round(fit.dev)}px`);
+        }
+      }
+      i = j;
+    }
+
+    // 호 길이 SPACING마다 점
     const path: { x: number; y: number; air: boolean }[] = [];
     let acc = 0;
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1];
-      const b = pts[i];
+    for (let i = 1; i < route.length; i++) {
+      const a = route[i - 1];
+      const b = route[i];
       const len = Math.hypot(b.x - a.x, b.y - a.y);
       let d = SPACING - acc;
       while (d <= len) {
@@ -313,7 +380,7 @@ export class StageBuilder {
       if (!a.apex) continue;
       // 이 장애물 근처 공중 구간에서 가장 높은 점
       let best: { x: number; y: number } | null = null;
-      for (const p of pts) {
+      for (const p of route) {
         if (!p.air || p.x < a.start - 420 || p.x > a.end + 300) continue;
         if (!best || p.y < best.y) best = p;
       }
@@ -340,9 +407,21 @@ export class StageBuilder {
       jellies.push({ type: st === 'coin' ? 'coin' : 'jelly_normal', x: Math.round(p.x), y: Math.round(p.y) });
     }
     for (const sp of specials) jellies.push({ type: sp.type, x: Math.round(sp.x), y: Math.round(sp.y) });
+    // 자석 젤리밭: 길 위쪽 줄 3개 (자석 없이는 닿지 않는 높이)
+    let fieldJellies = 0;
+    for (const f of this.fields) {
+      const baseY = cfg.groundY - BODY_C.run;
+      for (let x = f.from; x <= f.to; x += SPACING) {
+        for (const dy of [130, 196, 262]) {
+          jellies.push({ type: (x / SPACING) % 9 < 1 && dy === 196 ? 'jelly_big' : 'jelly_normal', x: Math.round(x), y: baseY - dy });
+          fieldJellies++;
+        }
+      }
+    }
     jellies.sort((a, b) => a.x - b.x || a.y - b.y);
 
     const stage = this.stageData(jellies, true);
+    if (asymArcs.length) console.warn(`대칭으로 못 바꾼 2단 점프 ${asymArcs.length}개: ${asymArcs.join(', ')}`);
 
     // 4) 검증: 계획대로 달리면 맞지 않고, 젤리를 (거의) 전부 먹는다
     const s = createSim(stage);
@@ -365,9 +444,41 @@ export class StageBuilder {
     const report =
       `${stage.id} ${stage.name}${stage.sections ? ` (스테이지 ${stage.sections.length}개)` : ''}: 길이 ${stage.length}px(${(stage.goalX / stage.speed).toFixed(0)}초), 장애물 ${stage.obstacles.length}, 구멍 ${this.holes.length}, ` +
       `젤리 ${count('jelly_normal')} · 곰 ${count('jelly_big')} · 카드 ${count('jelly_card')} · 룬 ${count('jelly_rune')} · 코인 ${count('coin')}, ` +
-      `아이템 ${stage.items.length}, 계획대로 먹은 젤리 ${(rate * 100).toFixed(1)}%, 점수 ${s.jellyScore.toLocaleString()}`;
+      `아이템 ${stage.items.length}, 대칭 2단 점프 길 ${symArcs}, 자석 젤리밭 ${this.fields.length}곳(${fieldJellies}개), 계획대로 먹은 젤리 ${(rate * 100).toFixed(1)}%, 점수 ${s.jellyScore.toLocaleString()}`;
     return { stage, plan, perfect: rec.toJSON(), report };
   }
+}
+
+/** 처음 공중 구간 */
+function firstAirRun(pts: { x: number; y: number; air: boolean }[]): { x: number; y: number; air: boolean }[] {
+  const i = pts.findIndex((p) => p.air);
+  if (i < 0) return [];
+  let j = i;
+  while (j < pts.length && pts[j].air) j++;
+  return pts.slice(i, j);
+}
+
+/**
+ * 공중 구간을 좌우 대칭 포물선(이륙점·착지점을 지나고 가운데가 가장 높음)으로 맞춘다.
+ * dev = 실제 궤적과의 최대 세로 차이 (몸 높이 100px 안이면 젤리를 그 포물선 위에 놓아도 먹힌다)
+ */
+function symmetricFit(seg: { x: number; y: number }[], y0?: number, y1?: number): { dev: number; at: (x: number) => number } {
+  if (seg.length < 3) return { dev: Infinity, at: () => 0 };
+  const x0 = seg[0].x;
+  const x1 = seg[seg.length - 1].x;
+  const b0 = y0 ?? seg[0].y;
+  const b1 = y1 ?? seg[seg.length - 1].y;
+  const peak = Math.min(...seg.map((p) => p.y));
+  const H = (b0 + b1) / 2 - peak;
+  const half = (x1 - x0) / 2;
+  const mid = (x0 + x1) / 2;
+  const at = (x: number) => {
+    const u = (x - mid) / half;
+    return b0 + ((b1 - b0) * (x - x0)) / (x1 - x0) - H * Math.max(0, 1 - u * u);
+  };
+  let dev = 0;
+  for (const p of seg) dev = Math.max(dev, Math.abs(at(p.x) - p.y));
+  return { dev, at };
 }
 
 /** StageData → Tiled 맵(.tmj) */

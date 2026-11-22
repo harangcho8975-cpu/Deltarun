@@ -21,7 +21,8 @@ export function jevilUltimate(s: SimState): boolean {
 
 /** 돌진 중 스크롤 배율 */
 export function jevilSpeedMul(s: SimState): number {
-  return s.jevil?.phase === 2 ? J.dashSpeedMul : 1;
+  const ph = s.jevil?.phase;
+  return ph === 2 ? J.dashSpeedMul : ph === 3 ? J.flightSpeedMul : 1;
 }
 
 /** 상자의 지금 위치 (화면 좌표, 중심): 왼쪽 위 출발점에서 목표점까지 곧게 */
@@ -198,7 +199,7 @@ export function updateJevil(s: SimState, from: number, to: number, events: SimEv
         j.phase = 0;
         j.elapsed = 0;
         j.judged = false;
-        j.stacks += J.stacksPerUltimate;
+        j.stacks = Math.min(J.maxStacks, j.stacks + J.stacksPerUltimate);
         j.timer = J.ultimateIntervalTicks;
         p.invulnTicks = Math.max(p.invulnTicks, J.afterUltimateTicks);
         s.boostGroundGrace = Math.max(s.boostGroundGrace, J.groundGraceAfterUltimateTicks);

@@ -58,6 +58,46 @@ describe('맵 "시작"', () => {
   });
 });
 
+describe('젤리 길 모양', () => {
+  it('2단 점프 젤리 길은 좌우 대칭: 가장 높은 젤리가 아치의 가운데에 있고 양쪽 높이가 같다', () => {
+    const base = 550;
+    const j = stages.ep1.jellies.filter((x) => x.type === 'jelly_normal' || x.type === 'coin');
+    // 바닥 높이를 벗어난 젤리들을 x 순서로 이어 붙여 아치를 찾는다
+    let arc: { x: number; y: number }[] = [];
+    let checked = 0;
+    const check = () => {
+      // 끊기지 않은 온전한 2단 점프 아치만 (룬·카드 젤리 자리에서 끊긴 반쪽 아치는 뺀다)
+      if (arc.length < 8 || base - Math.min(...arc.map((p) => p.y)) < 230 || arc[arc.length - 1].x - arc[0].x < 330) return;
+      const x0 = arc[0].x;
+      const x1 = arc[arc.length - 1].x;
+      const top = arc.reduce((a, b) => (b.y < a.y ? b : a));
+      expect(Math.abs(top.x - (x0 + x1) / 2), `아치 ${x0}~${x1}`).toBeLessThan(46); // 젤리 간격(44px) 안
+      checked++;
+    };
+    for (const p of j) {
+      if (p.y < base - 8) {
+        if (arc.length && p.x - arc[arc.length - 1].x > 60) {
+          check();
+          arc = [];
+        }
+        arc.push(p);
+      } else if (arc.length) {
+        check();
+        arc = [];
+      }
+    }
+    expect(checked).toBeGreaterThan(20);
+  });
+
+  it('자석 젤리밭: 자석 없이 정답대로 달리면 다 못 먹는다', () => {
+    const replay = JSON.parse(readFileSync(join(import.meta.dirname, 'replays', 'ep1.perfect.replay.json'), 'utf8')) as Replay;
+    const noMagnet = { ...stages.ep1, items: stages.ep1.items.filter((it) => it.type !== 'item_magnet') };
+    const { state } = runReplay(noMagnet, replay);
+    expect(state.outcome).toBe('cleared');
+    expect(state.jelliesTotal - state.jelliesTaken).toBeGreaterThan(1000);
+  });
+});
+
 describe('젤리 길: 알맞게 움직이면 젤리를 전부 먹는다', () => {
   it('정답 조작으로 끝까지 달리면 맞지 않고 젤리 100%, 별 3개', () => {
     const replay = JSON.parse(readFileSync(join(import.meta.dirname, 'replays', 'ep1.perfect.replay.json'), 'utf8')) as Replay;

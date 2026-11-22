@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 function collectErrors(page: Page): string[] {
@@ -114,8 +116,9 @@ test('로비: 플레이를 누르면 맵 카드("시작", 스테이지 10개) �
 test('맵 안에서 일정 거리를 가면 다음 스테이지: STAGE 배너가 뜨고 구간 이름이 바뀐다', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = collectErrors(page);
-  // 2번째 스테이지 구간(x = 16184) 바로 앞에서 시작
-  await page.goto('/?debug=1&stage=ep1&x=15800&god=1');
+  // 2번째 스테이지 구간 바로 앞에서 시작 (구간 위치는 맵 데이터에서 읽는다)
+  const ep1 = JSON.parse(readFileSync(join(import.meta.dirname, '../src/data/stages/ep1.json'), 'utf8')) as { sections: { x: number }[] };
+  await page.goto(`/?debug=1&stage=ep1&x=${ep1.sections[1].x - 400}&god=1`);
   await expect.poll(() => activeScenes(page)).toContain('Game');
   const label = () =>
     page.evaluate(() => (window.__deltaRun!.game.scene.getScene('UI') as unknown as { sectionLabel: { text: string } }).sectionLabel.text);
@@ -213,14 +216,14 @@ test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3
     });
 
   // 프리스크: 스킬 없음
-  await page.goto('/?char=frisk&stage=ep1&freezeAt=300');
+  await page.goto('/?char=frisk&stage=stage_flat&god=1&freezeAt=300');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
   const frisk = await info();
   expect(frisk.skill).toBeNull();
   expect(frisk.box).toBe(false);
 
   // 카오스 킹: 300틱 = 소능력 1번 발동 (240틱)
-  await page.goto('/?char=chaosking&stage=ep1&god=1&freezeAt=300');
+  await page.goto('/?char=chaosking&stage=stage_flat&god=1&freezeAt=300');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
   const early = await info();
   expect(early.skill!.count).toBe(1);
@@ -228,7 +231,7 @@ test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3
   expect(early.box).toBe(false);
 
   // 780틱 = 3번째 발동(720)이 대능력이라 지금 박스가 나와 있다
-  await page.goto('/?char=chaosking&stage=ep1&god=1&freezeAt=780');
+  await page.goto('/?char=chaosking&stage=stage_flat&god=1&freezeAt=780');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 60_000 }).toBe(true);
   const mid = await info();
   expect(mid.skill!.count).toBe(3);
@@ -439,7 +442,7 @@ test('제빌: 공중 슬라이드로 상자, 대능력 상자 폭격 → 돌진 
   await page.waitForTimeout(1600);
   await page.screenshot({ path: 'test-results/jevil-judgement.png' });
   await expect.poll(async () => (await st()).phase, { timeout: 30_000, intervals: [50] }).toBe(0);
-  expect((await st()).stacks).toBe(3); // 1 + 2
+  expect((await st()).stacks).toBe(2); // 1 + 2, 최대 2개
   expect(errors).toEqual([]);
 });
 

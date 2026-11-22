@@ -269,6 +269,17 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
   });
 });
 
+describe('카오스 킹 대능력 중 자력', () => {
+  it('박스가 나와 있는 동안 자석처럼 젤리를 끌어당긴다', () => {
+    const s = skillSim({ jellies: [{ type: 'jelly_normal', x: 3800, y: 300 }] });
+    runTagged(s, 720); // 3번째 발동 = 대능력 시작
+    expect(s.skill!.ultimateTicks).toBeGreaterThan(0);
+    const e = s.entities.find((x) => x.kind === 'jelly_normal')!;
+    runTagged(s, 120);
+    expect(e.alive).toBe(false);
+  });
+});
+
 describe('소능력·대능력 직후 무적', () => {
   it('소능력을 쓴 직후 무적 60틱(1초)', () => {
     const s = skillSim();

@@ -83,7 +83,7 @@ describe('제빌 대능력', () => {
     expect(s.jevil!.phase).toBe(4);
     ev = go(s, J.judgementTicks);
     expect(s.jevil!.phase).toBe(0);
-    expect(s.jevil!.stacks).toBe(4); // 끝나면 스택 +2
+    expect(s.jevil!.stacks).toBe(2); // 끝나면 스택 +2 (최대 2개까지만)
     expect(s.jevil!.timer).toBe(1200);
   });
 
@@ -178,6 +178,35 @@ describe('제빌 대능력', () => {
     const ev = go(s, 400, NONE);
     expect(of(ev, 'hit')).toHaveLength(0);
     expect(s.outcome).toBe('playing');
+  });
+});
+
+describe('제빌 스택·비행 속도·능력 중 자력', () => {
+  it('스택은 2개를 넘게 모이지 않는다', () => {
+    const s = jv();
+    s.jevil!.stacks = 1;
+    toUltimate(s);
+    go(s, J.boxPhaseTicks + J.dashTicks + J.flightTicks + J.judgementTicks);
+    expect(s.jevil!.phase).toBe(0);
+    expect(s.jevil!.stacks).toBe(2); // 1 + 2 → 최대 2
+  });
+
+  it('비행 중에는 스크롤이 1.5배', () => {
+    const s = jv();
+    toUltimate(s);
+    go(s, J.boxPhaseTicks + J.dashTicks + 5);
+    expect(s.jevil!.phase).toBe(3);
+    const x0 = s.cameraX;
+    go(s, 10);
+    expect(s.cameraX - x0).toBeCloseTo((s.stage.speed * J.flightSpeedMul * 10) / 60, 6);
+  });
+
+  it('대능력 중에는 자석처럼 젤리를 끌어당긴다', () => {
+    const s = jv({ jellies: [{ type: 'jelly_normal', x: 700, y: 300 }] });
+    toUltimate(s);
+    const e = s.entities.find((x) => x.kind === 'jelly_normal')!;
+    go(s, 120);
+    expect(e.alive).toBe(false); // 점프 없이는 닿지 않는 높이인데 끌려와 먹힘
   });
 });
 
