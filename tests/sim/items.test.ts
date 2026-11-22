@@ -48,16 +48,16 @@ describe('아이템', () => {
     expect(s.effects.magnet).toBeGreaterThan(cfg.effects.magnetTicks - 30);
   });
 
-  it('자석은 반경 220px 안 젤리만 끌어당긴다', () => {
-    // 몸 중심 y = 550. 하나는 세로 150px(반경 안), 하나는 세로 300px(반경 밖) 위에 둔다.
+  it('자석은 반경 340px 안 젤리만 끌어당긴다', () => {
+    // 몸 중심 y = 550. 하나는 세로 150px(반경 안), 하나는 세로 400px(반경 밖) 위에 둔다.
     const near = { type: 'jelly_normal' as const, x: 900, y: 400 };
-    const far = { type: 'jelly_big' as const, x: 1400, y: 250 };
+    const far = { type: 'jelly_big' as const, x: 1400, y: 150 };
     const s = sim({ items: [itemAt('item_magnet')], jellies: [near, far] });
     run(s, 40);
     const nearEnt = () => s.entities.find((e) => e.kind === 'jelly_normal')!;
     const farEnt = () => s.entities.find((e) => e.kind === 'jelly_big')!;
     const x0 = nearEnt().x;
-    run(s, 1, NONE); // 아직 220px 밖 → 그대로
+    run(s, 1, NONE); // 아직 340px 밖 → 그대로
     expect(nearEnt().x).toBe(x0);
     const farX = farEnt().x;
     run(s, 300);

@@ -205,13 +205,12 @@ describe('대능력이 끝나면 쌓인 코인이 떨어진다 (직접 주워야
     for (let i = 1; i < heights.length; i++) expect(heights[i]).toBeLessThan(heights[i - 1]);
   });
 
-  it('떨어진 코인은 화면과 함께 움직인다 (화면 왼쪽으로 쓸려 가지 않는다)', () => {
+  it('떨어진 코인은 바닥과 함께 움직인다 (맵에 고정: 화면이 가면 왼쪽으로 지나간다)', () => {
     const s = skillSim({ length: 40000, ground: [[0, 40000]], goalX: 39000 });
     s.drops.push({ id: 1, x: s.cameraX + 900, y: DROP_FLOOR_Y, vx: 0, vy: 0, delay: 0, bounces: 2, age: -1e6, settled: true });
-    const screenX0 = s.drops[0].x - s.cameraX;
+    const x0 = s.drops[0].x;
     for (let i = 0; i < 60; i++) step(s, NONE);
-    expect(s.cameraX).toBeGreaterThan(100); // 화면은 앞으로 갔지만
-    expect(s.drops[0].x - s.cameraX).toBeCloseTo(screenX0, 6); // 코인의 화면 위치는 그대로
+    expect(s.drops[0].x).toBe(x0); // 월드 위치는 그대로 → 화면에서는 바닥처럼 왼쪽으로 간다
   });
 
   it('튀어나온 코인은 잠깐 튕기다가 자력이 붙어 플레이어에게 끌려와 지급된다', () => {

@@ -46,7 +46,7 @@ export const gameConfig = {
     magnetTicks: 360,
     giantTicks: 300,
     boostTicks: 240,
-    magnetRadius: 220,
+    magnetRadius: 340, // 자석 아이템의 기본 범위 (px)
     magnetPullPerTick: 14,
     boostMultiplier: 2,
   },
@@ -138,7 +138,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 14;
+export const SIM_VERSION = 15;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {
