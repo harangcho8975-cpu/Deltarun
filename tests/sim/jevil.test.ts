@@ -210,6 +210,45 @@ describe('제빌 스택·비행 속도·능력 중 자력', () => {
   });
 });
 
+describe('제빌 비행 관성 없음·자력 따라오기', () => {
+  it('비행 중 누르면 바로 일정한 속도로 오르고, 떼면 바로 일정한 속도로 내려간다 (관성 없음)', () => {
+    const s = jv();
+    toUltimate(s);
+    go(s, J.boxPhaseTicks + J.dashTicks, NONE);
+    go(s, 10, HOLD); // 천장에 닿기 전까지만 올라간다
+    expect(s.player.vy).toBe(-J.flightVy);
+    const y0 = s.player.y;
+    go(s, 1, NONE);
+    expect(s.player.vy).toBe(J.flightVy); // 떼는 즉시 내려간다
+    expect(s.player.y).toBeGreaterThan(y0);
+    go(s, 1, HOLD);
+    expect(s.player.vy).toBe(-J.flightVy);
+  });
+
+  it('비행(1.5배 속도) 중에도 자력에 끌린 젤리가 따라와 먹힌다', () => {
+    const s = jv();
+    toUltimate(s);
+    go(s, J.boxPhaseTicks + J.dashTicks + 10, NONE);
+    // 플레이어 바로 뒤쪽 위에 젤리를 둔다 (가만히 두면 화면 뒤로 지나간다)
+    const e = { id: s.entities.length, kind: 'jelly_normal' as const, x: s.player.x - 150, y: 320, w: 28, h: 28, alive: true };
+    s.entities.push(e);
+    s.cursor = 0;
+    go(s, 60, NONE);
+    expect(e.alive).toBe(false);
+  });
+
+  it('자력 범위 밖으로 멀어지면 끌림이 완전히 끊긴다', () => {
+    const s = jv();
+    const e = { id: s.entities.length, kind: 'jelly_normal' as const, x: s.player.x + 700, y: 300, w: 28, h: 28, alive: true, pulled: true }; // 자석 범위(340) 밖, 화면 안
+    s.entities.push(e);
+    s.effects.magnet = 100;
+    const x0 = e.x;
+    go(s, 1, NONE);
+    expect(e.pulled).toBe(false);
+    expect(e.x).toBe(x0);
+  });
+});
+
 describe('제빌 무적', () => {
   it('상자(소능력)를 쓴 직후 1초 무적', () => {
     const s = jv();

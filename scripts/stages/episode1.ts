@@ -29,7 +29,7 @@ export const EPISODE1: StageDef[] = [
     spec: spec(1, '첫 발걸음'),
     build: (b) => {
       const g = 480;
-      b.run(700);
+      b.run(2200); // 시작하고 3초 남짓은 젤리만 먹으며 달린다
       P.mix(b, g);
       P.jumps(b, g);
       b.high(g + 80, 'card').bear();

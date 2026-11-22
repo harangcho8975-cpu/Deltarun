@@ -86,11 +86,9 @@ function setPhase(s: SimState, j: JevilState, phase: JevilPhase, events: SimEven
 /** 4장 5번 대신: 돌진·비행 중의 수직 이동 (player.ts에서 부른다) */
 export function updateFlight(s: SimState): void {
   const p = s.player;
-  // 돌진·비행: 누르고 있으면 올라가고, 떼면 내려간다 (지오메트리 대시의 비행기처럼)
-  const a = p.jumpHeld ? -J.flightUpAccel : J.flightGravity;
-  const vy0 = p.vy;
-  p.vy = Math.max(-J.flightMaxVy, Math.min(J.flightMaxVy, vy0 + a / TICK_RATE));
-  p.y += (vy0 + p.vy) / 2 / TICK_RATE;
+  // 돌진·비행: 누르고 있으면 올라가고, 떼면 내려간다. 관성 없이 바로 일정한 속도로
+  p.vy = p.jumpHeld ? -J.flightVy : J.flightVy;
+  p.y += p.vy / TICK_RATE;
   if (p.y < J.ceilingY) {
     p.y = J.ceilingY;
     p.vy = 0;

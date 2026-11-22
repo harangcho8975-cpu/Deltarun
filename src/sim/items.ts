@@ -1,5 +1,6 @@
-import { gameConfig as cfg } from '../config/gameConfig';
+import { gameConfig as cfg, TICK_RATE } from '../config/gameConfig';
 import type { ItemType } from '../data/schema';
+import { jevilSpeedMul } from './jevil';
 import type { EffectName, SimEvent, SimState } from './types';
 
 export function applyItem(s: SimState, kind: ItemType): void {
@@ -49,7 +50,9 @@ export function applyMagnet(s: SimState, from: number, to: number): void {
   const px = p.x + cfg.hitbox.run.w / 2;
   const py = p.y - cfg.hitbox.run.h / 2;
   const r = radius;
-  const pull = cfg.effects.magnetPullPerTick;
+  // 화면이 빨리 갈 때(부스터·제빌 돌진·비행)도 따라오도록, 앞으로 가는 속도보다 조금 더 빠르게 끌린다
+  const scroll = (s.stage.speed * (s.effects.boost > 0 ? cfg.effects.boostMultiplier : 1) * jevilSpeedMul(s)) / TICK_RATE;
+  const pull = Math.max(cfg.effects.magnetPullPerTick, scroll + cfg.effects.magnetCatchUp);
   for (let i = from; i < to; i++) {
     const e = s.entities[i];
     if (!e.alive || (!e.kind.startsWith('jelly_') && e.kind !== 'coin')) continue;
@@ -58,8 +61,14 @@ export function applyMagnet(s: SimState, from: number, to: number): void {
     const dx = px - cx;
     const dy = py - cy;
     const d = Math.hypot(dx, dy);
-    if (d === 0 || (!e.pulled && d > r)) continue;
-    e.pulled = true; // 반쯤 끌려오다 자석이 끝나 길 밖에 멈추는 일이 없게, 먹힐 때까지 계속 끌린다
+    if (d === 0) continue;
+    // 끌리던 젤리는 자석이 막 끝나도 자석 범위 안이면 마저 끌려와 먹힌다 (길 밖에 멈추지 않게)
+    const reach = e.pulled ? Math.max(r, cfg.effects.magnetRadius) : r;
+    if (d > reach) {
+      e.pulled = false; // 멀어지면 자력이 완전히 끊긴다
+      continue;
+    }
+    e.pulled = true; // 범위 안에서 끌리던 젤리는 자석이 막 끝나도 마저 끌려와 먹힌다 (길 밖에 멈추지 않게)
     const step = Math.min(pull, d);
     e.x += (dx / d) * step;
     e.y += (dy / d) * step;
