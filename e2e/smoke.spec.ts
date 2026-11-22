@@ -49,7 +49,7 @@ test('네 가지 화면 크기에서 같은 장면', async ({ browser }) => {
   const shots: number[][] = [];
   for (const vp of VIEWPORTS) {
     const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
-    await page.goto('/?stage=ep1_01&freezeAt=90');
+    await page.goto('/?stage=ep1&freezeAt=90');
     await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
     await page.waitForTimeout(300);
     const info = await page.evaluate(() => {
@@ -77,7 +77,7 @@ test('네 가지 화면 크기에서 같은 장면', async ({ browser }) => {
   for (let i = 1; i < shots.length; i++) expect(diff(shots[0], shots[i]), VIEWPORTS[i].name).toBeLessThan(2);
 });
 
-test('로비: 캐릭터가 가운데, 플레이를 누르면 에피소드 "시작" 월드맵에 스테이지 10개가 길을 따라 놓인다', async ({ page }) => {
+test('로비: 플레이를 누르면 맵 카드("시작", 스테이지 10개) → 누르면 준비 화면', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
@@ -89,8 +89,8 @@ test('로비: 캐릭터가 가운데, 플레이를 누르면 에피소드 "시�
         stageUI: { visible: boolean };
         strip: { list: { x: number; y: number; getData?: (k: string) => string }[] };
       };
-      const nodes = s.strip.list.filter((c) => c.getData?.('id')).map((c) => ({ x: c.x, y: c.y, id: c.getData!('id') }));
-      return { heroX: s.hero.x, heroKey: s.hero.texture.key, home: s.homeUI.visible, stages: s.stageUI.visible, nodes };
+      const cards = s.strip.list.filter((c) => c.getData?.('id')).map((c) => ({ x: c.x, y: c.y, id: c.getData!('id') }));
+      return { heroX: s.hero.x, heroKey: s.hero.texture.key, home: s.homeUI.visible, stages: s.stageUI.visible, cards };
     });
 
   let st = await lobby();
@@ -99,22 +99,30 @@ test('로비: 캐릭터가 가운데, 플레이를 누르면 에피소드 "시�
   expect(st.home).toBe(true);
   expect(st.stages).toBe(false);
 
-  // [플레이](오른쪽 아래)를 누르면 월드맵
-  await page.mouse.click(1090, 640);
+  await page.mouse.click(1090, 640); // 플레이
   await expect.poll(async () => (await lobby()).stages).toBe(true);
   st = await lobby();
   expect(st.home).toBe(false);
-  expect(st.nodes.map((n) => n.id)).toEqual(Array.from({ length: 10 }, (_, i) => `ep1_${String(i + 1).padStart(2, '0')}`));
-  await page.waitForTimeout(400);
-  await page.screenshot({ path: 'test-results/lobby-stages.png' });
-
-  // 잠긴 스테이지는 눌러도 아무 일 없고, 1-1을 누르면 준비 화면
-  const n2 = st.nodes[1];
-  await page.mouse.click(n2.x, n2.y);
+  expect(st.cards.map((c) => c.id)).toEqual(['ep1']);
   await page.waitForTimeout(300);
-  expect(await activeScenes(page)).toContain('Lobby');
-  await page.mouse.click(st.nodes[0].x, st.nodes[0].y - 5);
+  await page.screenshot({ path: 'test-results/lobby-stages.png' });
+  await page.mouse.click(st.cards[0].x, st.cards[0].y);
   await expect.poll(() => activeScenes(page)).toContain('Ready');
+  expect(errors).toEqual([]);
+});
+
+test('맵 안에서 일정 거리를 가면 다음 스테이지: STAGE 배너가 뜨고 구간 이름이 바뀐다', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  // 2번째 스테이지 구간(x = 16184) 바로 앞에서 시작
+  await page.goto('/?debug=1&stage=ep1&x=15800&god=1');
+  await expect.poll(() => activeScenes(page)).toContain('Game');
+  const label = () =>
+    page.evaluate(() => (window.__deltaRun!.game.scene.getScene('UI') as unknown as { sectionLabel: { text: string } }).sectionLabel.text);
+  await expect.poll(label, { timeout: 20_000 }).toContain('STAGE 1');
+  await expect.poll(label, { timeout: 60_000, intervals: [100] }).toContain('STAGE 2');
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: 'test-results/stage-banner.png' });
   expect(errors).toEqual([]);
 });
 
@@ -205,14 +213,14 @@ test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3
     });
 
   // 프리스크: 스킬 없음
-  await page.goto('/?char=frisk&stage=ep1_01&freezeAt=300');
+  await page.goto('/?char=frisk&stage=ep1&freezeAt=300');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
   const frisk = await info();
   expect(frisk.skill).toBeNull();
   expect(frisk.box).toBe(false);
 
   // 카오스 킹: 300틱 = 소능력 1번 발동 (240틱)
-  await page.goto('/?char=chaosking&stage=ep1_01&god=1&freezeAt=300');
+  await page.goto('/?char=chaosking&stage=ep1&god=1&freezeAt=300');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
   const early = await info();
   expect(early.skill!.count).toBe(1);
@@ -220,7 +228,7 @@ test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3
   expect(early.box).toBe(false);
 
   // 780틱 = 3번째 발동(720)이 대능력이라 지금 박스가 나와 있다
-  await page.goto('/?char=chaosking&stage=ep1_01&god=1&freezeAt=780');
+  await page.goto('/?char=chaosking&stage=ep1&god=1&freezeAt=780');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 60_000 }).toBe(true);
   const mid = await info();
   expect(mid.skill!.count).toBe(3);

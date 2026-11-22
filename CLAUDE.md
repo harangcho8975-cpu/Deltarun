@@ -19,7 +19,7 @@
 
 - `src/sim/`은 Phaser를 import하지 않는다. 1틱 = 1/60초, 랜덤·시계 함수 금지. 같은 입력이면 같은 결과.
 - 수치는 `src/config/gameConfig.ts`에만. 규칙 코드를 바꿔 결과가 달라지면 `SIM_VERSION`을 올리고 `npm run replays`로 리플레이를 다시 녹화한다.
-- 스테이지는 `scripts/stages/*.ts`에 배치(장애물·구멍·아이템·특별 젤리)만 적고 `npm run stages`로 만든다: 실제 물리로 정답 조작을 찾아 젤리 길을 깔고 `maps/*.tmj`·`src/data/stages/`·`tests/replays/*.perfect.replay.json`을 새로 쓴다. 이 셋은 직접 고치지 않는다.
+- 맵(한 맵 안에 스테이지 구간 여러 개)은 `scripts/stages/*.ts`에 배치(장애물·구멍·아이템·특별 젤리)만 적고 `npm run stages`로 만든다: 실제 물리로 정답 조작을 찾아 젤리 길을 깔고 `maps/*.tmj`·`src/data/stages/`·`tests/replays/*.perfect.replay.json`을 새로 쓴다. 이 셋은 직접 고치지 않는다.
 - 규칙·수치를 바꾸면 `npm run stages` 다음 `npm run replays`.
 - 에셋은 `public/assets/manifest.json`의 키로만 쓴다. `path: null`이면 플레이스홀더.
 - 화면은 1280×720 고정(FIT). 휴대폰·PC가 같은 화면을 본다.

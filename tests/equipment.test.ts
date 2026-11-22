@@ -152,12 +152,12 @@ describe('장비 효과가 게임 규칙에 적용된다', () => {
 
   it('리플레이는 장착한 장비 효과를 함께 기록해 같은 결과로 재생된다', () => {
     const mods = modsFor(['armor', 'bottle', 'sneakers']);
-    const replay: Replay = { stageId: 'ep1_01', configHash: configHash(), mods, inputs: [[30, 'J'], [200, 'J']] };
-    const a = runReplay(stages.ep1_01, replay, 800, true);
-    const b = runReplay(stages.ep1_01, replay, 800, true);
+    const replay: Replay = { stageId: 'ep1', configHash: configHash(), mods, inputs: [[30, 'J'], [200, 'J']] };
+    const a = runReplay(stages.ep1, replay, 800, true);
+    const b = runReplay(stages.ep1, replay, 800, true);
     expect(a.hashes).toEqual(b.hashes);
     expect(a.state.maxHp).toBe(120); // 장비 효과가 재생에도 적용됨
-    const plain = runReplay(stages.ep1_01, { ...replay, mods: undefined }, 800, true);
+    const plain = runReplay(stages.ep1, { ...replay, mods: undefined }, 800, true);
     expect(plain.hashes).not.toEqual(a.hashes);
   });
 });

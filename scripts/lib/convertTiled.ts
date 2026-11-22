@@ -18,6 +18,7 @@ interface TiledProperty {
 
 export interface TiledObject {
   id: number;
+  name?: string;
   x: number;
   y: number;
   width?: number;
@@ -191,6 +192,15 @@ export function convertTiled(map: TiledMap, file: string): ConvertResult {
     if (!inGround(goalX)) err(`goal이 바닥 위가 아님 (x = ${goalX})`, goals[0]);
   }
 
+  const sections = layer('sections')
+    .filter((o) => clsOf(o) === 'section')
+    .map((o) => ({ name: (o.name ?? '').trim(), x: Math.round(o.x) }))
+    .sort((a, b) => a.x - b.x);
+  for (const s of sections) {
+    if (!s.name) err(`이름 없는 구간 (x = ${s.x})`);
+    if (s.x < 0 || s.x >= goalX) err(`구간이 맵 밖에 있음 (x = ${s.x})`);
+  }
+
   if (errors.length) return { stage: null, errors };
 
   obstacles.sort((a, b) => a.x - b.x);
@@ -210,6 +220,7 @@ export function convertTiled(map: TiledMap, file: string): ConvertResult {
       items,
       goalX,
       stars: stars as [number, number, number],
+      ...(sections.length ? { sections } : {}),
     },
     errors,
   };

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TICK_MS } from '../config/gameConfig';
 import { Sound } from '../audio/Sound';
+import { sectionAt } from '../data/episodes';
 import { validateStage, type StageData } from '../data/schema';
 import { stages } from '../data/stages';
 import testStage from '../data/stage_test.json';
@@ -24,6 +25,9 @@ export interface RunResultData {
   stars: 0 | 1 | 2 | 3;
   coins: number;
   jellies: string;
+  /** 도달한 스테이지 구간 (1부터)과 이름 */
+  section: number;
+  sectionName: string;
 }
 
 /** 테스트용 긴 평지 (구멍 없음, 낮은 장애물 800px마다): 스킬을 오래 지켜볼 때 ?stage=stage_flat */
@@ -251,6 +255,8 @@ export class GameScene extends Phaser.Scene {
       stars: starsFor(s),
       coins: s.coins,
       jellies: `${s.jelliesTaken}/${s.jelliesTotal}`,
+      section: sectionAt(s.stage, s.player.x) + 1,
+      sectionName: s.stage.sections?.[sectionAt(s.stage, s.player.x)]?.name ?? '',
     };
     this.controls.enabled = false;
     this.events.emit('finished', result.outcome);

@@ -1,6 +1,6 @@
 // 자동 플레이 봇: 시뮬레이션이 결정적이므로 상태를 복제해 행동 후보를 미리 돌려 본다.
 // 1단계 행동(점프·슬라이드 등)을 실행한 뒤, 2단계로 이어질 가장 좋은 행동까지 내다보고
-// "피해 없이 버틴 틱 수"가 가장 길고, 같으면 젤리를 더 먹는 행동을 고른다.
+// "피해 없이 버틴 틱 수"가 가장 길고, 같으면 젤리를 더 먹고 체력을 더 챙기는(회복 물약) 행동을 고른다.
 import { gameConfig as cfg } from '../config/gameConfig';
 import type { StageData } from '../data/schema';
 import { cloneSim, createSim } from './createSim';
@@ -43,6 +43,9 @@ interface Score {
   jellies: number;
 }
 
+/** 젤리 점수 + 체력 변화(회복 물약 하나 = 20 → 젤리 2000점어치로 친다: 긴 맵에서 물약을 놓치지 않게) */
+const gain = (s: SimState, j0: number, h0: number) => s.jellyScore - j0 + Math.max(0, s.player.hp - h0) * 100;
+
 const better = (a: Score, b: Score) => a.safe > b.safe || (a.safe === b.safe && a.jellies > b.jellies);
 
 /** 계획을 실행한다. 피해를 입으면 그 틱을, 아니면 null을 돌려준다. */
@@ -66,10 +69,11 @@ function execute(s: SimState, plan: Plan, budget: number): { hitAt: number | nul
 function evaluate(base: SimState, plan: Plan, depth: number, budget: number): Score {
   const s = cloneSim(base);
   const j0 = s.jellyScore;
+  const h0 = s.player.hp;
   const r = execute(s, plan, budget);
-  if (r.hitAt !== null) return { safe: r.hitAt, jellies: s.jellyScore - j0 };
+  if (r.hitAt !== null) return { safe: r.hitAt, jellies: gain(s, j0, h0) };
   if (s.outcome === 'cleared' || r.used >= budget || depth === 0) {
-    return { safe: s.outcome === 'cleared' ? budget + 1 : r.used, jellies: s.jellyScore - j0 };
+    return { safe: s.outcome === 'cleared' ? budget + 1 : r.used, jellies: gain(s, j0, h0) };
   }
   let best: Score = { safe: -1, jellies: -1 };
   const rest = budget - r.used;
@@ -78,7 +82,7 @@ function evaluate(base: SimState, plan: Plan, depth: number, budget: number): Sc
     if (better(sc, best)) best = sc;
     if (best.safe >= rest) break; // 끝까지 안전한 이어가기를 찾았으면 충분
   }
-  return { safe: r.used + best.safe, jellies: s.jellyScore - j0 + best.jellies };
+  return { safe: r.used + best.safe, jellies: gain(s, j0, h0) + best.jellies };
 }
 
 /** 지금 상태에서 다음에 실행할 계획을 고른다. */
@@ -101,7 +105,7 @@ export interface BotRun {
   hits: number;
 }
 
-export function playWithBot(stage: StageData, maxTicks = 60 * 60 * 5, skill: SkillId | null = null, mods?: Partial<Modifiers>): BotRun {
+export function playWithBot(stage: StageData, maxTicks = 60 * 60 * 15, skill: SkillId | null = null, mods?: Partial<Modifiers>): BotRun {
   const s = createSim(stage, { skill, mods });
   const rec = new ReplayRecorder(stage.id, skill, mods);
   let hits = 0;

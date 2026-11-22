@@ -1,26 +1,25 @@
+import type { StageData } from './schema';
 import { stageOrder, stages } from './stages';
 
-export interface Episode {
-  id: string;
-  /** 에피소드 번호 (스테이지 이름 앞의 "1-") */
-  no: number;
-  name: string;
-  stageIds: string[];
-}
+/**
+ * 맵 목록. 카카오 쿠키런처럼 맵 하나 안에 스테이지 구간이 여러 개 이어져 있다 (StageData.sections).
+ * 맵 id가 곧 스테이지 데이터 id다.
+ */
+export const maps: string[] = stageOrder;
 
-/** 에피소드 목록. 지금은 "시작" 하나에 스테이지 10개 */
-export const episodes: Episode[] = [{ id: 'ep1', no: 1, name: '시작', stageIds: stageOrder.filter((id) => id.startsWith('ep1_')) }];
-
-/** "1-3" 같은 스테이지 번호 */
-export function stageLabel(id: string): string {
-  for (const e of episodes) {
-    const i = e.stageIds.indexOf(id);
-    if (i >= 0) return `${e.no}-${i + 1}`;
-  }
-  return id;
-}
-
-/** "1-3 숙여서 지나가기" */
+/** 화면에 쓰는 맵 이름 */
 export function stageTitle(id: string): string {
-  return `${stageLabel(id)}  ${stages[id]?.name ?? ''}`.trim();
+  return stages[id]?.name ?? id;
+}
+
+/** x 위치가 몇 번째 스테이지 구간인지 (0부터). 구간이 없으면 0 */
+export function sectionAt(stage: StageData, x: number): number {
+  const secs = stage.sections ?? [];
+  let i = 0;
+  for (let k = 0; k < secs.length; k++) if (x >= secs[k].x) i = k;
+  return i;
+}
+
+export function sectionCount(stage: StageData): number {
+  return Math.max(1, stage.sections?.length ?? 1);
 }

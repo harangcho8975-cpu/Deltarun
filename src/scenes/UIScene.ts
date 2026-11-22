@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { gameConfig as cfg, TICK_RATE } from '../config/gameConfig';
 import { PAUSE_AREA, type InputController } from '../input/InputController';
+import { sectionAt } from '../data/episodes';
 import { totalScore, type SimState } from '../sim';
 import { fullscreen } from '../ui/fullscreen';
 import { button, COLORS, text } from '../ui/style';
@@ -26,6 +27,9 @@ export class UIScene extends Phaser.Scene {
   private jumpBtn!: Phaser.GameObjects.Image;
   private slideBtn!: Phaser.GameObjects.Image;
   private menu!: Phaser.GameObjects.Container;
+  private sectionLabel!: Phaser.GameObjects.Text;
+  private stageBanner!: Phaser.GameObjects.Container;
+  private section = -1;
   private game_!: GameScene;
 
   constructor() {
@@ -48,6 +52,16 @@ export class UIScene extends Phaser.Scene {
     this.skillBar = this.add.graphics();
     this.popup = text(this, 640, 220, '', 44, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 8).setAlpha(0);
     this.banner = text(this, 640, 330, '', 72, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 10).setVisible(false);
+    // 맵 안 스테이지 구간: 지금 몇 번째인지, 바뀌면 큰 배너
+    this.sectionLabel = text(this, 460, 78, '', 20, '#ffffff', true).setOrigin(0, 0.5).setStroke('#1a1a2e', 5);
+    this.stageBanner = this.add
+      .container(640, 250, [
+        this.add.rectangle(0, 0, 1280, 120, 0x1a1a2e, 0.55),
+        text(this, 0, -18, '', 56, '#ffd23f', true).setOrigin(0.5).setStroke('#6b4423', 9),
+        text(this, 0, 34, '', 26, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 6),
+      ])
+      .setAlpha(0);
+    this.section = -1;
 
     // 점프·슬라이드 버튼 (표시용: 실제 판정은 화면 왼쪽/오른쪽 절반)
     this.jumpBtn = this.add.image(130, 600, 'ui_btn_jump').setDisplaySize(160, 160).setAlpha(0.5);
@@ -92,6 +106,16 @@ export class UIScene extends Phaser.Scene {
     return this.add.container(0, 0, items).setDepth(100);
   }
 
+  private showStageBanner(n: number, name: string): void {
+    const [, title, sub] = this.stageBanner.list as Phaser.GameObjects.Text[];
+    title.setText(`STAGE ${n}`);
+    sub.setText(name);
+    this.tweens.killTweensOf(this.stageBanner);
+    this.stageBanner.setAlpha(0).setScale(0.8);
+    this.tweens.add({ targets: this.stageBanner, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: this.stageBanner, alpha: 0, delay: 1700, duration: 400 });
+  }
+
   private onPaused(on: boolean): void {
     this.menu.setVisible(on);
   }
@@ -131,6 +155,21 @@ export class UIScene extends Phaser.Scene {
       .fillRoundedRect(40, 72, Math.max(12, 400 * ratio), 12, 6);
 
     this.score.setText(totalScore(s).toLocaleString());
+
+    // 스테이지 구간 표시: 진행 막대 위 눈금과 'STAGE n 이름'
+    const secs = s.stage.sections;
+    if (secs && secs.length > 1) {
+      for (const sec of secs.slice(1)) {
+        const r = Math.min(1, (sec.x - cfg.playerScreenX) / (s.stage.goalX - cfg.playerScreenX));
+        this.progress.fillStyle(0xffffff, 0.9).fillRect(40 + 400 * r - 1, 68, 3, 20);
+      }
+      const i = sectionAt(s.stage, s.player.x);
+      if (i !== this.section) {
+        this.sectionLabel.setText(`STAGE ${i + 1}  ${secs[i].name}`);
+        this.showStageBanner(i + 1, secs[i].name);
+        this.section = i;
+      }
+    }
 
     const parts: string[] = [];
     const sec = (t: number) => (t / TICK_RATE).toFixed(1);

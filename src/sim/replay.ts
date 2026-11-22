@@ -73,7 +73,7 @@ export interface RunResult {
   hashes: string[];
 }
 
-export function runReplay(stage: StageData, replay: Replay, maxTicks = 60 * 60 * 5, collectHashes = false): RunResult {
+export function runReplay(stage: StageData, replay: Replay, maxTicks = 60 * 60 * 15, collectHashes = false): RunResult {
   const s = createSim(stage, { skill: replay.skill ?? null, mods: replay.mods });
   const player = new ReplayPlayer(replay);
   const hashes: string[] = [];

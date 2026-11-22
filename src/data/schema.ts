@@ -19,6 +19,8 @@ export interface StageData {
   items: { type: ItemType; x: number; y: number }[]; // 중심 좌표
   goalX: number;
   stars: [number, number, number];
+  /** 한 맵 안의 스테이지 구간 (카카오 쿠키런처럼 일정 거리를 가면 다음 스테이지). x = 구간이 시작하는 월드 x */
+  sections?: { name: string; x: number }[];
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -58,6 +60,14 @@ export function validateStage(data: unknown): string[] {
   }
   for (const it of s.items ?? []) {
     if (!ITEM_TYPES.includes(it.type) || !isNum(it.x) || !isNum(it.y)) errors.push(`잘못된 아이템 ${JSON.stringify(it)}`);
+  }
+  if (s.sections !== undefined) {
+    if (!Array.isArray(s.sections)) errors.push('sections는 배열');
+    else
+      s.sections.forEach((sec, i) => {
+        if (typeof sec?.name !== 'string' || !isNum(sec?.x)) errors.push(`잘못된 구간 ${JSON.stringify(sec)}`);
+        else if (i > 0 && sec.x <= s.sections![i - 1].x) errors.push(`구간 순서가 틀림: ${sec.name}`);
+      });
   }
   if (!Array.isArray(s.obstacles)) errors.push('obstacles 배열 없음');
   if (!Array.isArray(s.jellies)) errors.push('jellies 배열 없음');

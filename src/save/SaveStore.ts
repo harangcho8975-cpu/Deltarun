@@ -7,6 +7,8 @@ export interface StageRecord {
   cleared: boolean;
   bestScore: number;
   bestStars: 0 | 1 | 2 | 3;
+  /** 맵 안에서 가장 멀리 간 스테이지 번호 (1부터) */
+  bestSection?: number;
 }
 
 /** 장비: 가진 장비(id → 개수)와 지금 장착한 장비(최대 슬롯 수) */
@@ -93,6 +95,7 @@ function sanitize(raw: unknown): SaveData {
         cleared: rec.cleared === true,
         bestScore: Number.isFinite(rec.bestScore) ? Math.max(0, Math.floor(rec.bestScore)) : 0,
         bestStars: (stars >= 0 && stars <= 3 ? Math.floor(stars) : 0) as 0 | 1 | 2 | 3,
+        ...(Number.isFinite(rec.bestSection) && (rec.bestSection as number) > 0 ? { bestSection: Math.floor(rec.bestSection as number) } : {}),
       };
     }
   }
@@ -120,6 +123,8 @@ export interface RunReport {
   score: number;
   stars: 0 | 1 | 2 | 3;
   coins: number;
+  /** 이번 판에 도달한 스테이지 번호 (1부터, 맵 안 구간) */
+  section?: number;
 }
 
 export class SaveStore {
@@ -185,6 +190,7 @@ export class SaveStore {
     if (newBest) next.bestScore = r.score;
     if (r.stars > prev.bestStars) next.bestStars = r.stars;
     if (r.cleared) next.cleared = true;
+    if (r.section && r.section > (prev.bestSection ?? 0)) next.bestSection = r.section;
     this.data.stages[r.stageId] = next;
     const bonus = r.cleared ? ECONOMY.stageClearBonus : 0; // 클리어할 때마다 보너스
     this.data.coins += r.coins + bonus; // 판에서 주운 코인은 실패해도 누적

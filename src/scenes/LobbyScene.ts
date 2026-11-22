@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Sound } from '../audio/Sound';
 import { characterById, RARITY } from '../data/characters';
-import { episodes, stageLabel } from '../data/episodes';
+import { maps, sectionCount } from '../data/episodes';
 import { stageOrder, stages } from '../data/stages';
 import { cloud } from '../online';
 import { saveStore } from '../save/store';
@@ -11,15 +11,13 @@ import { button, coinPill, COLORS, hex, iconButton, panel, shade, text, topBar }
 
 const W = 1280;
 const H = 720;
-/** 월드맵에서 스테이지 점의 자리: 아래 줄 왼쪽→오른쪽, 위 줄 오른쪽→왼쪽으로 굽이치는 길 */
-const NODE_POS: [number, number][] = [
-  [130, 610], [330, 548], [530, 610], [730, 548], [930, 610],
-  [1140, 470], [960, 330], [750, 268], [540, 330], [290, 250],
-];
+const MAP_CARD = { w: 420, h: 500, y: 400 };
+/** 맵별 카드 색 (그림이 생기면 교체) */
+const MAP_COLORS = [0x5bbcf0, 0xf08a3c, 0x5a4fcf];
 
 /**
  * 로비 (쿠키런 오븐브레이크 느낌): 가운데 선택한 캐릭터, 위쪽 프로필·코인, 왼쪽 이벤트·계정,
- * 아래쪽 캐릭터·장비·뽑기 탭과 큰 [플레이]. 플레이 → 월드맵(에피소드의 스테이지들) → 준비 화면(캐릭터·장비 선택) → 게임.
+ * 아래쪽 캐릭터·장비·뽑기 탭과 큰 [플레이]. 플레이 → 맵 카드 → 준비 화면(캐릭터·장비 선택) → 게임 (맵 안에 스테이지 구간 여러 개).
  */
 export class LobbyScene extends Phaser.Scene {
   private hero!: Phaser.GameObjects.Image;
@@ -157,77 +155,71 @@ export class LobbyScene extends Phaser.Scene {
     return this.add.container(0, 0, items).setDepth(50);
   }
 
-  // ───────── 스테이지 선택: 쿠키런 킹덤처럼 길을 따라 늘어선 스테이지 ─────────
+  // ───────── 맵 선택: 맵 하나 안에 스테이지 구간이 여러 개 (카카오 쿠키런처럼) ─────────
 
   private buildStageUI(): Phaser.GameObjects.Container {
-    const ep = episodes[0];
-    const sky = this.add.graphics();
-    sky.fillStyle(0x7ccf8a, 1).fillRect(0, 0, W, H);
-    // 들판 무늬
-    for (let i = 0; i < 26; i++) sky.fillStyle(0x6bbf7a, 1).fillEllipse((i * 197) % W, 140 + ((i * 131) % 560), 160, 60);
-    for (let i = 0; i < 14; i++) {
-      const x = (i * 263 + 80) % W;
-      const y = 150 + ((i * 89) % 520);
-      sky.fillStyle(0x3f8f55, 1).fillCircle(x, y, 22).fillCircle(x + 18, y + 6, 18).fillCircle(x - 16, y + 8, 16); // 덤불
-    }
+    const dim = this.add.rectangle(0, 0, W, H, COLORS.panel, 0.55).setOrigin(0);
     this.strip = this.add.container(0, 0);
-    const pts = NODE_POS.slice(0, ep.stageIds.length).map(([x, y]) => new Phaser.Math.Vector2(x, y));
-    const road = this.add.graphics();
-    if (pts.length > 1) {
-      const curve = new Phaser.Curves.Spline(pts);
-      const line = curve.getPoints(pts.length * 24);
-      road.lineStyle(44, COLORS.brown, 1).strokePoints(line, false);
-      road.lineStyle(32, 0xf3dfb0, 1).strokePoints(line, false);
-      // 지나온 길(열린 곳까지)은 진하게
-      const open = ep.stageIds.filter((id) => saveStore.isUnlocked(stageOrder, id)).length;
-      if (open > 1) {
-        const upto = curve.getPoints((open - 1) * 24).slice(0, (open - 1) * 24 + 1);
-        road.lineStyle(14, COLORS.yellow, 0.9).strokePoints(upto, false);
-      }
-    }
-    this.strip.add(road);
-    ep.stageIds.forEach((id, i) => this.strip.add(this.node(pts[i].x, pts[i].y, id, i === ep.stageIds.length - 1)));
-    const head = topBar(this, `에피소드 ${ep.no} · ${ep.name}`, () => this.closeStages(), saveStore.data.coins).objects;
-    return this.add.container(0, 0, [sky, this.strip, ...head]).setDepth(20);
+    const n = maps.length + 1; // 마지막은 '준비 중' 카드
+    const gap = 60;
+    const total = n * MAP_CARD.w + (n - 1) * gap;
+    const startX = (W - total) / 2 + MAP_CARD.w / 2;
+    maps.forEach((id, i) => this.strip.add(this.mapCard(startX + i * (MAP_CARD.w + gap), MAP_CARD.y, id, i)));
+    this.strip.add(this.comingSoon(startX + maps.length * (MAP_CARD.w + gap), MAP_CARD.y));
+    const head = topBar(this, '맵 선택', () => this.closeStages(), saveStore.data.coins).objects;
+    return this.add.container(0, 0, [dim, this.strip, ...head]).setDepth(20);
   }
 
-  /** 길 위의 스테이지 점: 지나온 곳은 별, 지금 도전할 곳은 통통 튄다, 잠긴 곳은 회색 */
-  private node(x: number, y: number, id: string, boss: boolean): Phaser.GameObjects.Container {
-    const unlocked = saveStore.isUnlocked(stageOrder, id);
+  private mapCard(x: number, y: number, id: string, i: number): Phaser.GameObjects.Container {
+    const stage = stages[id];
     const rec = saveStore.record(id);
-    const current = unlocked && !rec.cleared;
-    const r = boss ? 54 : 42;
-    const color = !unlocked ? 0x8a8fa3 : rec.cleared ? COLORS.green : COLORS.yellow;
+    const unlocked = saveStore.isUnlocked(stageOrder, id);
+    const color = MAP_COLORS[i % MAP_COLORS.length];
+    const { w, h } = MAP_CARD;
+    const L = -w / 2;
+    const T = -h / 2;
     const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.25).fillEllipse(0, r - 2, r * 2.1, r * 0.7);
-    g.fillStyle(shade(color, 0.6), 1).fillCircle(0, 6, r);
-    g.fillStyle(color, 1).fillCircle(0, 0, r);
-    g.fillStyle(0xffffff, 0.25).fillEllipse(0, -r * 0.42, r * 1.3, r * 0.6);
-    g.lineStyle(5, 0xffffff, 1).strokeCircle(0, 0, r);
+    g.fillStyle(0x000000, 0.3).fillRoundedRect(L + 4, T + 10, w, h, 26);
+    g.fillStyle(COLORS.cream, 1).fillRoundedRect(L, T, w, h, 26);
+    g.fillStyle(color, 1).fillRoundedRect(L + 14, T + 14, w - 28, 210, 18);
+    g.fillStyle(0xffffff, 0.18).fillRoundedRect(L + 14, T + 14, w - 28, 80, { tl: 18, tr: 18, bl: 0, br: 0 });
+    // 맵 그림 자리: 언덕과 길
+    g.fillStyle(shade(color, 0.8), 1).fillEllipse(L + 120, T + 200, 190, 44).fillEllipse(L + 300, T + 204, 210, 36);
+    g.lineStyle(5, COLORS.brown, 1).strokeRoundedRect(L, T, w, h, 26);
+    const secs = sectionCount(stage);
     const items: Phaser.GameObjects.GameObject[] = [
       g,
-      text(this, 0, -2, stageLabel(id), boss ? 30 : 26, '#ffffff', true).setOrigin(0.5).setStroke(hex(shade(color, 0.45)), 6),
+      text(this, 0, T + 58, `맵 ${i + 1}`, 22, '#ffffff', true).setOrigin(0.5).setStroke(hex(shade(color, 0.45)), 5),
+      text(this, 0, T + 128, stage.name, 60, '#ffffff', true).setOrigin(0.5).setStroke(hex(shade(color, 0.45)), 9),
+      text(this, 0, T + 262, `스테이지 ${secs}개`, 24, '#4a3520', true).setOrigin(0.5),
+      text(this, 0, T + 306, '★'.repeat(rec.bestStars) + '☆'.repeat(3 - rec.bestStars), 40, '#f5a623').setOrigin(0.5).setStroke('#8a5a00', 3),
+      text(this, 0, T + 352, rec.bestScore ? `최고 ${rec.bestScore.toLocaleString()}점` : '아직 기록 없음', 20, '#7a6048').setOrigin(0.5),
+      text(this, 0, T + 384, rec.bestSection ? `최고 도달 STAGE ${rec.bestSection}${rec.cleared ? ' (완주!)' : ''}` : '', 18, '#1e9c52', true).setOrigin(0.5),
     ];
-    if (unlocked) {
-      items.push(text(this, 0, r + 22, '★'.repeat(rec.bestStars) + '☆'.repeat(3 - rec.bestStars), 24, '#ffd23f').setOrigin(0.5).setStroke('#6b4423', 4));
-    } else {
-      // 자물쇠
-      const lock = this.add.graphics();
-      lock.lineStyle(5, 0xffffff, 1).strokeCircle(r * 0.62, -r * 0.62, 9);
-      lock.fillStyle(0xffffff, 1).fillRoundedRect(r * 0.62 - 12, -r * 0.62, 24, 18, 4);
-      items.push(lock);
-    }
-    // 이름표
-    const name = text(this, 0, unlocked ? r + 50 : r + 22, stages[id].name, 16, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 4);
-    items.push(name);
-    if (boss) items.push(text(this, 0, -r - 18, 'BOSS', 18, '#ffd23f', true).setOrigin(0.5).setStroke('#6b4423', 5));
+    const chip = this.add.graphics();
+    chip.fillStyle(shade(COLORS.green, 0.6), 1).fillRoundedRect(-100, T + 418, 200, 56, 20);
+    chip.fillStyle(unlocked ? COLORS.green : COLORS.locked, 1).fillRoundedRect(-100, T + 412, 200, 56, 20);
+    chip.lineStyle(3, 0xffffff, 0.9).strokeRoundedRect(-100, T + 412, 200, 56, 20);
+    items.push(chip, text(this, 0, T + 440, unlocked ? '선택' : '잠김', 26, '#ffffff', true).setOrigin(0.5).setStroke('#1e6b33', 4));
+    const zone = this.add.zone(0, 0, w, h).setInteractive({ useHandCursor: unlocked });
+    zone.on('pointerup', () => this.selectStage(id));
+    items.push(zone);
     const c = this.add.container(x, y, items);
     c.setData('id', id);
-    const zone = this.add.zone(0, 0, r * 2.4, r * 2.4).setInteractive({ useHandCursor: unlocked });
-    zone.on('pointerup', () => this.selectStage(id));
-    c.add(zone);
-    if (current) this.tweens.add({ targets: c, y: y - 10, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     return c;
+  }
+
+  private comingSoon(x: number, y: number): Phaser.GameObjects.Container {
+    const { w, h } = MAP_CARD;
+    const g = this.add.graphics();
+    g.fillStyle(0x000000, 0.3).fillRoundedRect(-w / 2 + 4, -h / 2 + 10, w, h, 26);
+    g.fillStyle(0x6b6f80, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 26);
+    g.lineStyle(5, 0x3d4157, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 26);
+    return this.add.container(x, y, [
+      g,
+      text(this, 0, -40, '다음 맵', 40, '#e8eaf2', true).setOrigin(0.5),
+      text(this, 0, 20, '준비 중', 26, '#c9d1e6').setOrigin(0.5),
+    ]);
   }
 
   private openStages(animate = true): void {

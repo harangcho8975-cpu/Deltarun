@@ -55,8 +55,15 @@ export class StageBuilder {
   private actions: Action[] = [];
   private zones: Zone[] = [];
   private bears: number[] = [];
+  private sections: { name: string; x: number }[] = [];
 
   constructor(private spec: StageSpec) {}
+
+  /** 여기서부터 새 스테이지 구간 (한 맵 안의 STAGE n) */
+  section(name: string): this {
+    this.sections.push({ name, x: this.x });
+    return this;
+  }
 
   /** 이후 젤리 모양: 젤리 / 코인 / 없음 */
   jellies(style: JellyStyle): this {
@@ -164,6 +171,7 @@ export class StageBuilder {
       items: items ? this.items.map((it) => ({ type: it.type, x: it.x, y: cfg.groundY - BODY_C.run })) : [],
       goalX,
       stars: [0.5, 0.75, 0.95],
+      ...(this.sections.length ? { sections: this.sections.map((s) => ({ ...s })) } : {}),
     };
   }
 
@@ -258,7 +266,7 @@ export class StageBuilder {
     const s = createSim(this.stageData([], true));
     const input = StageBuilder.runner(plan);
     const pts: { x: number; y: number; air: boolean }[] = [];
-    while (s.outcome === 'playing' && s.tick < 60 * 60 * 5) {
+    while (s.outcome === 'playing' && s.tick < 60 * 60 * 15) {
       const ev = step(s, input(s));
       if (ev.some((e) => e.type === 'hit')) throw new Error(`${this.spec.id}: 계획대로 달렸는데 x=${Math.round(s.player.x)}에서 맞음`);
       const p = s.player;
@@ -341,7 +349,7 @@ export class StageBuilder {
     const input = StageBuilder.runner(plan);
     const rec = new ReplayRecorder(stage.id, null);
     let hits = 0;
-    while (s.outcome === 'playing' && s.tick < 60 * 60 * 5) {
+    while (s.outcome === 'playing' && s.tick < 60 * 60 * 15) {
       const f = input(s);
       rec.record(s.tick, f);
       for (const e of step(s, f)) if (e.type === 'hit') hits++;
@@ -355,7 +363,7 @@ export class StageBuilder {
     }
     const count = (t: JellyType) => stage.jellies.filter((j) => j.type === t).length;
     const report =
-      `${stage.id} ${stage.name}: 길이 ${stage.length}px(${(stage.goalX / stage.speed).toFixed(0)}초), 장애물 ${stage.obstacles.length}, 구멍 ${this.holes.length}, ` +
+      `${stage.id} ${stage.name}${stage.sections ? ` (스테이지 ${stage.sections.length}개)` : ''}: 길이 ${stage.length}px(${(stage.goalX / stage.speed).toFixed(0)}초), 장애물 ${stage.obstacles.length}, 구멍 ${this.holes.length}, ` +
       `젤리 ${count('jelly_normal')} · 곰 ${count('jelly_big')} · 카드 ${count('jelly_card')} · 룬 ${count('jelly_rune')} · 코인 ${count('coin')}, ` +
       `아이템 ${stage.items.length}, 계획대로 먹은 젤리 ${(rate * 100).toFixed(1)}%, 점수 ${s.jellyScore.toLocaleString()}`;
     return { stage, plan, perfect: rec.toJSON(), report };
@@ -392,6 +400,7 @@ export function toTmj(stage: StageData): unknown {
     layer(3, 'jellies', stage.jellies.map((j) => point(j.type, j.x, j.y))),
     layer(4, 'items', stage.items.map((it) => point(it.type, it.x, it.y))),
     layer(5, 'goal', [obj({ type: 'goal', x: stage.goalX, y: 0, width: 32, height: cfg.groundY })]),
+    layer(6, 'sections', (stage.sections ?? []).map((s) => obj({ type: 'section', name: s.name, x: s.x, y: 0, width: 0, height: 0, point: true }))),
   ];
   return {
     type: 'map',
@@ -405,7 +414,7 @@ export function toTmj(stage: StageData): unknown {
     height: 18,
     tilewidth: 40,
     tileheight: 40,
-    nextlayerid: 6,
+    nextlayerid: 7,
     nextobjectid: id,
     tilesets: [],
     properties: [

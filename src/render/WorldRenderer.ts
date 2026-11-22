@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { gameConfig as cfg } from '../config/gameConfig';
+import { sectionAt } from '../data/episodes';
 import type { StageData } from '../data/schema';
 import { playerBox } from '../sim/collision';
 import { bigScytheY, jevilBoxPos, scytheBox } from '../sim/jevil';
@@ -13,6 +14,8 @@ const W = 1280;
 const H = 720;
 const PARALLAX = [0.1, 0.3, 0.6];
 const GROUND_TILE = 64;
+/** 스테이지 구간별 배경 색감: 아침 → 낮 → 노을 → 밤 → 새벽 … */
+const SECTION_TINTS = [0xffffff, 0xe8f6ff, 0xfff0d8, 0xffd9b8, 0xffc4a8, 0xe0c8ff, 0xb8c4ff, 0x9fb0e8, 0xc8b0ff, 0xffb8d8];
 
 const isCentered = (k: EntityKind) => !k.startsWith('obstacle_');
 
@@ -109,6 +112,7 @@ export class WorldRenderer {
   private debugGfx: Phaser.GameObjects.Graphics | null = null;
   private playerAnim = '';
   private hitFlashUntil = 0;
+  private tint = 0xffffff;
   renderCameraX = 0;
 
   constructor(private scene: Phaser.Scene, private stage: StageData, debug: boolean) {
@@ -164,6 +168,14 @@ export class WorldRenderer {
     const py = prev.playerY + (s.player.y - prev.playerY) * alpha;
 
     this.bg.forEach((t, i) => (t.tilePositionX = cam * PARALLAX[i]));
+    // 스테이지 구간마다 배경 색감을 바꾼다 (그림이 생기면 구간별 배경으로 교체)
+    if (this.stage.sections) {
+      const tint = SECTION_TINTS[sectionAt(this.stage, cam + cfg.playerScreenX) % SECTION_TINTS.length];
+      if (tint !== this.tint) {
+        this.tint = tint;
+        this.bg.forEach((t) => t.setTint(tint));
+      }
+    }
 
     // 바닥: 보이는 구간만 잘라 그리고, 무늬는 월드 좌표에 고정
     let gi = 0;
