@@ -65,19 +65,11 @@ npm run replays    # 봇으로 스테이지별 클리어 리플레이 재녹화
 2. `manifest.json`에서 해당 키의 `path`를 `"images/player_run.png"`처럼 바꾸고, `width`·`height`(프레임 1개 크기)·`frames`를 맞춘다.
 3. 코드는 고치지 않는다. 히트박스는 `src/config/gameConfig.ts` 값이라 이미지가 바뀌어도 난이도는 그대로다.
 
-## 맵 편집
-
-`maps/stage_0N.tmj`를 [Tiled](https://www.mapeditor.org/)로 열어 오브젝트 레이어(`ground`, `obstacles`, `jellies`, `items`, `goal`)를 고친 뒤:
-
-```bash
-npm run maps
-```
-
-```bash
-npm run replays
-```
-
-`npm run maps`는 규칙 위반(구멍 위 장애물, 2단 점프로 못 넘는 구멍 등)이 있으면 오브젝트 번호와 함께 실패한다. 맵이나 수치를 바꾸면 `npm run replays`로 리플레이를 다시 녹화해야 `npm test`가 통과한다. 시뮬레이션 규칙(코드)을 바꿔 결과가 달라지면 `gameConfig.ts`의 `SIM_VERSION`을 올린다.
+## 스테이지 만들기
+- 에피소드 1 "시작"에 스테이지 10개(1-1 ~ 1-10). 로비 [플레이]를 누르면 길을 따라 스테이지가 놓인 월드맵이 나옵니다.
+- 배치는 `scripts/stages/episode1.ts`에 적습니다: `low()` 점프, `high()` 2단 점프, `air()`/`airs(n)` 슬라이드, `hole(폭)` 구멍, `item()`, `bear()` 곰젤리, `smash()` 거대화·부스터로 부술 장애물, 점프 정점에 `'card'`(카드 젤리)·`'rune'`(델타룬 문양 젤리)·`'big'`.
+- `npm run stages`: 실제 물리로 각 장애물을 넘는 가장 넉넉한 시점을 찾고, 그대로 달린 몸 중심 궤적을 따라 44px 간격으로 젤리를 깝니다. 그래서 젤리가 겹치거나 비지 않고, 알맞게 움직이면 끝까지 이어 먹습니다. 정답 조작으로 달려 피격 0·젤리 100%인지 검증하고, 맵(`maps/*.tmj`)·데이터·정답 리플레이를 씁니다.
+- 젤리 점수: 일반 10, 곰 100, 카드 300, 델타룬 문양 3000. 그림은 `public/assets/manifest.json`의 `jelly_card`, `jelly_rune`.
 
 ## 디버그 (`?debug=1`)
 

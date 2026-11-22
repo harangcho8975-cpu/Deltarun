@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { ECONOMY } from '../config/economy';
 import { ABILITY_LABEL, characterById, RARITY } from '../data/characters';
 import { describeEffect, equipmentById, modsFor } from '../data/equipment';
+import { stageTitle } from '../data/episodes';
 import { stageOrder, stages } from '../data/stages';
 import { saveStore } from '../save/store';
 import { button, COLORS, panel, rarityPill, text, topBar } from '../ui/style';
@@ -26,12 +27,10 @@ export class ReadyScene extends Phaser.Scene {
   }
 
   create(): void {
-    const stage = stages[this.stageId];
-    const idx = stageOrder.indexOf(this.stageId);
     this.add.tileSprite(0, 0, W, H, 'bg_far').setOrigin(0);
     this.add.tileSprite(0, 0, W, H, 'bg_mid').setOrigin(0).setAlpha(0.6);
     this.add.rectangle(0, 0, W, H, COLORS.panel, 0.35).setOrigin(0);
-    topBar(this, `STAGE ${idx + 1}  ${stage?.name ?? this.stageId}`, () => this.back(), saveStore.data.coins);
+    topBar(this, stageTitle(this.stageId), () => this.back(), saveStore.data.coins);
 
     this.buildCharacter();
     this.buildEquipment();

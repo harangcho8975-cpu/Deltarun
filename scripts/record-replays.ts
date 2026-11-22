@@ -1,6 +1,6 @@
 // npm run replays — 자동 플레이 봇으로 각 스테이지 클리어 리플레이를 다시 녹화한다.
 // 맵이나 gameConfig 수치, 시뮬레이션 규칙을 바꾼 뒤 실행한다.
-// 스킬이 있는 캐릭터는 스킬을 켠 리플레이(stage_01.chaosking.replay.json), 장비를 낀 리플레이(stage_01.equipped.replay.json)도 따로 만든다.
+// 스킬이 있는 캐릭터는 스킬을 켠 리플레이(ep1_01.chaosking.replay.json), 장비를 낀 리플레이(ep1_01.equipped.replay.json)도 따로 만든다.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { stageOrder, stages } from '../src/data/stages';

@@ -1,9 +1,9 @@
 export type ObstacleType = 'obstacle_low' | 'obstacle_high' | 'obstacle_air';
-export type JellyType = 'jelly_normal' | 'jelly_big' | 'coin';
+export type JellyType = 'jelly_normal' | 'jelly_big' | 'jelly_card' | 'jelly_rune' | 'coin';
 export type ItemType = 'item_heal' | 'item_magnet' | 'item_giant' | 'item_boost';
 
 export const OBSTACLE_TYPES: readonly ObstacleType[] = ['obstacle_low', 'obstacle_high', 'obstacle_air'];
-export const JELLY_TYPES: readonly JellyType[] = ['jelly_normal', 'jelly_big', 'coin'];
+export const JELLY_TYPES: readonly JellyType[] = ['jelly_normal', 'jelly_big', 'jelly_card', 'jelly_rune', 'coin'];
 export const ITEM_TYPES: readonly ItemType[] = ['item_heal', 'item_magnet', 'item_giant', 'item_boost'];
 
 export interface StageData {

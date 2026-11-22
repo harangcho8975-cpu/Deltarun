@@ -49,7 +49,7 @@ test('네 가지 화면 크기에서 같은 장면', async ({ browser }) => {
   const shots: number[][] = [];
   for (const vp of VIEWPORTS) {
     const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
-    await page.goto('/?stage=stage_01&freezeAt=90');
+    await page.goto('/?stage=ep1_01&freezeAt=90');
     await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
     await page.waitForTimeout(300);
     const info = await page.evaluate(() => {
@@ -77,7 +77,7 @@ test('네 가지 화면 크기에서 같은 장면', async ({ browser }) => {
   for (let i = 1; i < shots.length; i++) expect(diff(shots[0], shots[i]), VIEWPORTS[i].name).toBeLessThan(2);
 });
 
-test('로비: 캐릭터가 가운데, 플레이를 누르면 세로 카드가 가로로 늘어선다', async ({ page }) => {
+test('로비: 캐릭터가 가운데, 플레이를 누르면 에피소드 "시작" 월드맵에 스테이지 10개가 길을 따라 놓인다', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
   await expect.poll(() => activeScenes(page)).toContain('Lobby');
@@ -87,10 +87,10 @@ test('로비: 캐릭터가 가운데, 플레이를 누르면 세로 카드가 �
         hero: { x: number; texture: { key: string } };
         homeUI: { visible: boolean };
         stageUI: { visible: boolean };
-        strip: { list: { x: number; y: number; list: { width?: number; height?: number; type: string }[] }[] };
+        strip: { list: { x: number; y: number; getData?: (k: string) => string }[] };
       };
-      const cards = s.strip.list.map((c) => ({ x: c.x, y: c.y }));
-      return { heroX: s.hero.x, heroKey: s.hero.texture.key, home: s.homeUI.visible, stages: s.stageUI.visible, cards };
+      const nodes = s.strip.list.filter((c) => c.getData?.('id')).map((c) => ({ x: c.x, y: c.y, id: c.getData!('id') }));
+      return { heroX: s.hero.x, heroKey: s.hero.texture.key, home: s.homeUI.visible, stages: s.stageUI.visible, nodes };
     });
 
   let st = await lobby();
@@ -99,21 +99,22 @@ test('로비: 캐릭터가 가운데, 플레이를 누르면 세로 카드가 �
   expect(st.home).toBe(true);
   expect(st.stages).toBe(false);
 
-  // 로비에서는 캐릭터를 바꾸지 않는다 (변경은 캐릭터 목록·정보 화면에서)
-  await page.waitForTimeout(200);
-  expect((await lobby()).heroKey).toBe('char_orange');
-
-  // [플레이](오른쪽 아래)를 누르면 카드가 나타난다
+  // [플레이](오른쪽 아래)를 누르면 월드맵
   await page.mouse.click(1090, 640);
   await expect.poll(async () => (await lobby()).stages).toBe(true);
   st = await lobby();
   expect(st.home).toBe(false);
-  expect(st.cards).toHaveLength(3);
-  // 가로로 배열: y는 모두 같고 x는 증가
-  expect(new Set(st.cards.map((c) => c.y)).size).toBe(1);
-  expect(st.cards[0].x).toBeLessThan(st.cards[1].x);
-  expect(st.cards[1].x).toBeLessThan(st.cards[2].x);
+  expect(st.nodes.map((n) => n.id)).toEqual(Array.from({ length: 10 }, (_, i) => `ep1_${String(i + 1).padStart(2, '0')}`));
+  await page.waitForTimeout(400);
   await page.screenshot({ path: 'test-results/lobby-stages.png' });
+
+  // 잠긴 스테이지는 눌러도 아무 일 없고, 1-1을 누르면 준비 화면
+  const n2 = st.nodes[1];
+  await page.mouse.click(n2.x, n2.y);
+  await page.waitForTimeout(300);
+  expect(await activeScenes(page)).toContain('Lobby');
+  await page.mouse.click(st.nodes[0].x, st.nodes[0].y - 5);
+  await expect.poll(() => activeScenes(page)).toContain('Ready');
   expect(errors).toEqual([]);
 });
 
@@ -204,14 +205,14 @@ test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3
     });
 
   // 프리스크: 스킬 없음
-  await page.goto('/?char=frisk&stage=stage_01&freezeAt=300');
+  await page.goto('/?char=frisk&stage=ep1_01&freezeAt=300');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
   const frisk = await info();
   expect(frisk.skill).toBeNull();
   expect(frisk.box).toBe(false);
 
   // 카오스 킹: 300틱 = 소능력 1번 발동 (240틱)
-  await page.goto('/?char=chaosking&stage=stage_01&god=1&freezeAt=300');
+  await page.goto('/?char=chaosking&stage=ep1_01&god=1&freezeAt=300');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 30_000 }).toBe(true);
   const early = await info();
   expect(early.skill!.count).toBe(1);
@@ -219,7 +220,7 @@ test('프리스크는 능력이 없고, 카오스 킹은 4초마다 소능력·3
   expect(early.box).toBe(false);
 
   // 780틱 = 3번째 발동(720)이 대능력이라 지금 박스가 나와 있다
-  await page.goto('/?char=chaosking&stage=stage_01&god=1&freezeAt=780');
+  await page.goto('/?char=chaosking&stage=ep1_01&god=1&freezeAt=780');
   await expect.poll(() => page.evaluate(() => window.__deltaRun!.frozen), { timeout: 60_000 }).toBe(true);
   const mid = await info();
   expect(mid.skill!.count).toBe(3);
@@ -402,7 +403,7 @@ test('제빌: 공중 슬라이드로 상자, 대능력 상자 폭격 → 돌진 
       return { tick: g.sim.tick, state: g.sim.player.state, y: g.sim.player.y, phase: j.phase, stacks: j.stacks, boxes: j.boxes.length, shards: j.shards.length };
     });
   // 1초 뒤 대능력
-  await page.goto('/?char=jevil&stage=stage_03&god=1&ult=1');
+  await page.goto('/?char=jevil&stage=stage_flat&god=1&ult=1');
   await expect.poll(async () => (await st()).tick, { timeout: 30_000 }).toBeGreaterThan(10);
   expect((await st()).stacks).toBe(2);
   // 소능력: 점프 후 공중에서 슬라이드

@@ -71,6 +71,8 @@ export function step(s: SimState, input: InputFrame): SimEvent[] {
     switch (e.kind) {
       case 'jelly_normal':
       case 'jelly_big':
+      case 'jelly_card':
+      case 'jelly_rune':
       case 'coin': {
         e.alive = false;
         const kind = e.kind as JellyType;

@@ -27,6 +27,8 @@ export interface Entity {
   w: number;
   h: number;
   alive: boolean;
+  /** 자석에 한 번 끌리기 시작했다: 자석이 끝나도 먹힐 때까지 계속 날아온다 */
+  pulled?: boolean;
 }
 
 export interface PlayerSim {

@@ -43,7 +43,6 @@ export function tickTimers(s: SimState, events: SimEvent[]): void {
 export function applyMagnet(s: SimState, from: number, to: number): void {
   const timed = s.effects.magnet > 0;
   const radius = Math.max(timed ? cfg.effects.magnetRadius : 0, s.mods.passiveMagnetRadius);
-  if (radius <= 0) return;
   const p = s.player;
   const px = p.x + cfg.hitbox.run.w / 2;
   const py = p.y - cfg.hitbox.run.h / 2;
@@ -51,13 +50,14 @@ export function applyMagnet(s: SimState, from: number, to: number): void {
   const pull = cfg.effects.magnetPullPerTick;
   for (let i = from; i < to; i++) {
     const e = s.entities[i];
-    if (!e.alive || (e.kind !== 'jelly_normal' && e.kind !== 'jelly_big' && e.kind !== 'coin')) continue;
+    if (!e.alive || (!e.kind.startsWith('jelly_') && e.kind !== 'coin')) continue;
     const cx = e.x + e.w / 2;
     const cy = e.y - e.h / 2;
     const dx = px - cx;
     const dy = py - cy;
     const d = Math.hypot(dx, dy);
-    if (d > r || d === 0) continue;
+    if (d === 0 || (!e.pulled && d > r)) continue;
+    e.pulled = true; // 반쯤 끌려오다 자석이 끝나 길 밖에 멈추는 일이 없게, 먹힐 때까지 계속 끌린다
     const step = Math.min(pull, d);
     e.x += (dx / d) * step;
     e.y += (dy / d) * step;

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Sound } from '../audio/Sound';
 import { characterById, RARITY } from '../data/characters';
+import { episodes, stageLabel } from '../data/episodes';
 import { stageOrder, stages } from '../data/stages';
 import { cloud } from '../online';
 import { saveStore } from '../save/store';
@@ -10,17 +11,15 @@ import { button, coinPill, COLORS, hex, iconButton, panel, shade, text, topBar }
 
 const W = 1280;
 const H = 720;
-const CARD_W = 250;
-const CARD_H = 470;
-const CARD_GAP = 36;
-const CARD_Y = 390;
-const EDGE = 60;
-/** 스테이지별 카드 색 (그림이 생기면 교체) */
-const STAGE_COLORS = [0x5bbcf0, 0xf08a3c, 0x5a4fcf, 0x4fb36b, 0xc77dff];
+/** 월드맵에서 스테이지 점의 자리: 아래 줄 왼쪽→오른쪽, 위 줄 오른쪽→왼쪽으로 굽이치는 길 */
+const NODE_POS: [number, number][] = [
+  [130, 610], [330, 548], [530, 610], [730, 548], [930, 610],
+  [1140, 470], [960, 330], [750, 268], [540, 330], [290, 250],
+];
 
 /**
  * 로비 (쿠키런 오븐브레이크 느낌): 가운데 선택한 캐릭터, 위쪽 프로필·코인, 왼쪽 이벤트·계정,
- * 아래쪽 캐릭터·장비·뽑기 탭과 큰 [플레이]. 플레이 → 스테이지 카드 → 준비 화면(캐릭터·장비 선택) → 게임.
+ * 아래쪽 캐릭터·장비·뽑기 탭과 큰 [플레이]. 플레이 → 월드맵(에피소드의 스테이지들) → 준비 화면(캐릭터·장비 선택) → 게임.
  */
 export class LobbyScene extends Phaser.Scene {
   private hero!: Phaser.GameObjects.Image;
@@ -31,11 +30,6 @@ export class LobbyScene extends Phaser.Scene {
   private strip!: Phaser.GameObjects.Container;
   private stageOpen = false;
   private openOnStart = false;
-  private scrollMin = EDGE;
-  private dragStartX = 0;
-  private dragStripX = 0;
-  private dragging = false;
-  private dragMoved = 0;
 
   constructor() {
     super('Lobby');
@@ -59,7 +53,6 @@ export class LobbyScene extends Phaser.Scene {
     this.settingsUI = this.buildSettings().setVisible(false);
 
     this.setupKeys();
-    this.setupDrag();
     if (this.openOnStart) this.openStages(false);
   }
 
@@ -164,69 +157,77 @@ export class LobbyScene extends Phaser.Scene {
     return this.add.container(0, 0, items).setDepth(50);
   }
 
-  // ───────── 스테이지 카드 (세로로 긴 카드가 가로로 배열) ─────────
+  // ───────── 스테이지 선택: 쿠키런 킹덤처럼 길을 따라 늘어선 스테이지 ─────────
 
   private buildStageUI(): Phaser.GameObjects.Container {
-    const dim = this.add.rectangle(0, 0, W, H, COLORS.panel, 0.55).setOrigin(0);
+    const ep = episodes[0];
+    const sky = this.add.graphics();
+    sky.fillStyle(0x7ccf8a, 1).fillRect(0, 0, W, H);
+    // 들판 무늬
+    for (let i = 0; i < 26; i++) sky.fillStyle(0x6bbf7a, 1).fillEllipse((i * 197) % W, 140 + ((i * 131) % 560), 160, 60);
+    for (let i = 0; i < 14; i++) {
+      const x = (i * 263 + 80) % W;
+      const y = 150 + ((i * 89) % 520);
+      sky.fillStyle(0x3f8f55, 1).fillCircle(x, y, 22).fillCircle(x + 18, y + 6, 18).fillCircle(x - 16, y + 8, 16); // 덤불
+    }
     this.strip = this.add.container(0, 0);
-    const n = stageOrder.length;
-    const total = n * CARD_W + (n - 1) * CARD_GAP;
-    const overflow = total > W - EDGE * 2;
-    const startX = overflow ? EDGE : (W - total) / 2;
-    this.scrollMin = overflow ? W - EDGE - total : startX;
-    stageOrder.forEach((id, i) => {
-      const x = startX + i * (CARD_W + CARD_GAP) + CARD_W / 2;
-      this.strip.add(this.card(x, CARD_Y, id, i));
-    });
-    this.strip.setData('home', 0);
-    // 위쪽 바: 만들어진 객체들을 모아 스테이지 화면과 함께 보이고 숨긴다
-    const head = topBar(this, '스테이지 선택', () => this.closeStages(), saveStore.data.coins).objects;
-    return this.add.container(0, 0, [dim, this.strip, ...head]).setDepth(20);
+    const pts = NODE_POS.slice(0, ep.stageIds.length).map(([x, y]) => new Phaser.Math.Vector2(x, y));
+    const road = this.add.graphics();
+    if (pts.length > 1) {
+      const curve = new Phaser.Curves.Spline(pts);
+      const line = curve.getPoints(pts.length * 24);
+      road.lineStyle(44, COLORS.brown, 1).strokePoints(line, false);
+      road.lineStyle(32, 0xf3dfb0, 1).strokePoints(line, false);
+      // 지나온 길(열린 곳까지)은 진하게
+      const open = ep.stageIds.filter((id) => saveStore.isUnlocked(stageOrder, id)).length;
+      if (open > 1) {
+        const upto = curve.getPoints((open - 1) * 24).slice(0, (open - 1) * 24 + 1);
+        road.lineStyle(14, COLORS.yellow, 0.9).strokePoints(upto, false);
+      }
+    }
+    this.strip.add(road);
+    ep.stageIds.forEach((id, i) => this.strip.add(this.node(pts[i].x, pts[i].y, id, i === ep.stageIds.length - 1)));
+    const head = topBar(this, `에피소드 ${ep.no} · ${ep.name}`, () => this.closeStages(), saveStore.data.coins).objects;
+    return this.add.container(0, 0, [sky, this.strip, ...head]).setDepth(20);
   }
 
-  private card(x: number, y: number, id: string, i: number): Phaser.GameObjects.Container {
+  /** 길 위의 스테이지 점: 지나온 곳은 별, 지금 도전할 곳은 통통 튄다, 잠긴 곳은 회색 */
+  private node(x: number, y: number, id: string, boss: boolean): Phaser.GameObjects.Container {
     const unlocked = saveStore.isUnlocked(stageOrder, id);
     const rec = saveStore.record(id);
-    const color = STAGE_COLORS[i % STAGE_COLORS.length];
+    const current = unlocked && !rec.cleared;
+    const r = boss ? 54 : 42;
+    const color = !unlocked ? 0x8a8fa3 : rec.cleared ? COLORS.green : COLORS.yellow;
     const g = this.add.graphics();
-    const L = -CARD_W / 2;
-    const T = -CARD_H / 2;
-    g.fillStyle(0x000000, 0.3).fillRoundedRect(L + 4, T + 10, CARD_W, CARD_H, 24);
-    g.fillStyle(unlocked ? COLORS.cream : 0x6b6f80, 1).fillRoundedRect(L, T, CARD_W, CARD_H, 24);
-    // 위쪽 그림 자리 (스테이지 색)
-    g.fillStyle(unlocked ? color : 0x4a4e60, 1).fillRoundedRect(L + 12, T + 12, CARD_W - 24, 220, 16);
-    g.fillStyle(0xffffff, 0.18).fillRoundedRect(L + 12, T + 12, CARD_W - 24, 90, { tl: 16, tr: 16, bl: 0, br: 0 });
-    g.lineStyle(5, unlocked ? COLORS.brown : 0x3d4157, 1).strokeRoundedRect(L, T, CARD_W, CARD_H, 24);
-
+    g.fillStyle(0x000000, 0.25).fillEllipse(0, r - 2, r * 2.1, r * 0.7);
+    g.fillStyle(shade(color, 0.6), 1).fillCircle(0, 6, r);
+    g.fillStyle(color, 1).fillCircle(0, 0, r);
+    g.fillStyle(0xffffff, 0.25).fillEllipse(0, -r * 0.42, r * 1.3, r * 0.6);
+    g.lineStyle(5, 0xffffff, 1).strokeCircle(0, 0, r);
     const items: Phaser.GameObjects.GameObject[] = [
       g,
-      text(this, 0, T + 40, `STAGE ${i + 1}`, 22, '#ffffff', true).setOrigin(0.5).setStroke(hex(shade(color, 0.45)), 5),
-      text(this, 0, T + 140, `${i + 1}`, 110, '#ffffff', true).setOrigin(0.5).setAlpha(unlocked ? 0.95 : 0.4).setStroke(hex(shade(color, 0.5)), 8),
-      text(this, 0, T + 268, stages[id].name, 28, unlocked ? '#4a3520' : '#d3d7e6', true).setOrigin(0.5),
+      text(this, 0, -2, stageLabel(id), boss ? 30 : 26, '#ffffff', true).setOrigin(0.5).setStroke(hex(shade(color, 0.45)), 6),
     ];
     if (unlocked) {
-      items.push(
-        text(this, 0, T + 318, '★'.repeat(rec.bestStars) + '☆'.repeat(3 - rec.bestStars), 40, '#f5a623').setOrigin(0.5).setStroke('#8a5a00', 3),
-        text(this, 0, T + 366, rec.bestScore ? `최고 ${rec.bestScore.toLocaleString()}점` : '아직 기록 없음', 19, '#7a6048').setOrigin(0.5),
-      );
-      const chip = this.add.graphics();
-      chip.fillStyle(shade(COLORS.green, 0.6), 1).fillRoundedRect(-80, T + 404, 160, 46, 18);
-      chip.fillStyle(COLORS.green, 1).fillRoundedRect(-80, T + 398, 160, 46, 18);
-      chip.lineStyle(3, 0xffffff, 0.9).strokeRoundedRect(-80, T + 398, 160, 46, 18);
-      items.push(chip, text(this, 0, T + 421, '선택', 22, '#ffffff', true).setOrigin(0.5).setStroke('#1e6b33', 4));
+      items.push(text(this, 0, r + 22, '★'.repeat(rec.bestStars) + '☆'.repeat(3 - rec.bestStars), 24, '#ffd23f').setOrigin(0.5).setStroke('#6b4423', 4));
     } else {
-      items.push(
-        text(this, 0, T + 330, '잠김', 32, '#e8eaf2', true).setOrigin(0.5),
-        text(this, 0, T + 390, `STAGE ${i}을 클리어하면\n열려요`, 18, '#e8eaf2').setOrigin(0.5).setAlign('center'),
-      );
+      // 자물쇠
+      const lock = this.add.graphics();
+      lock.lineStyle(5, 0xffffff, 1).strokeCircle(r * 0.62, -r * 0.62, 9);
+      lock.fillStyle(0xffffff, 1).fillRoundedRect(r * 0.62 - 12, -r * 0.62, 24, 18, 4);
+      items.push(lock);
     }
-
-    const zone = this.add.zone(0, 0, CARD_W, CARD_H).setInteractive({ useHandCursor: unlocked });
-    zone.on('pointerup', () => {
-      if (this.dragMoved < 12) this.selectStage(id);
-    });
-    items.push(zone);
-    return this.add.container(x, y, items);
+    // 이름표
+    const name = text(this, 0, unlocked ? r + 50 : r + 22, stages[id].name, 16, '#ffffff', true).setOrigin(0.5).setStroke('#1a1a2e', 4);
+    items.push(name);
+    if (boss) items.push(text(this, 0, -r - 18, 'BOSS', 18, '#ffd23f', true).setOrigin(0.5).setStroke('#6b4423', 5));
+    const c = this.add.container(x, y, items);
+    c.setData('id', id);
+    const zone = this.add.zone(0, 0, r * 2.4, r * 2.4).setInteractive({ useHandCursor: unlocked });
+    zone.on('pointerup', () => this.selectStage(id));
+    c.add(zone);
+    if (current) this.tweens.add({ targets: c, y: y - 10, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    return c;
   }
 
   private openStages(animate = true): void {
@@ -235,18 +236,7 @@ export class LobbyScene extends Phaser.Scene {
     this.homeUI.setVisible(false);
     this.showHero(false);
     this.stageUI.setVisible(true).setAlpha(animate ? 0 : 1);
-    this.strip.x = this.strip.getData('home') as number;
-    const unlockedIdx = stageOrder.reduce((last, id, i) => (saveStore.isUnlocked(stageOrder, id) ? i : last), 0);
-    // 카드가 많아 스크롤되는 경우, 지금 열린 마지막 스테이지가 보이게 맞춘다
-    if (this.scrollMin < EDGE) {
-      const target = EDGE - unlockedIdx * (CARD_W + CARD_GAP) + (W - EDGE * 2 - CARD_W) / 2;
-      this.strip.x = Phaser.Math.Clamp(target, this.scrollMin - EDGE, 0);
-    }
-    if (!animate) return;
-    const finalX = this.strip.x;
-    this.strip.x = finalX + 220;
-    this.tweens.add({ targets: this.stageUI, alpha: 1, duration: 200 });
-    this.tweens.add({ targets: this.strip, x: finalX, duration: 320, ease: 'Cubic.easeOut' });
+    if (animate) this.tweens.add({ targets: this.stageUI, alpha: 1, duration: 220 });
   }
 
   private closeStages(): void {
@@ -287,25 +277,6 @@ export class LobbyScene extends Phaser.Scene {
         const open = stageOrder.filter((id) => saveStore.isUnlocked(stageOrder, id));
         this.selectStage(open[open.length - 1]);
       }
-    });
-  }
-
-  /** 카드가 화면보다 많아지면 좌우로 끌어서 넘긴다 */
-  private setupDrag(): void {
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      this.dragging = this.stageOpen && this.scrollMin < EDGE;
-      this.dragStartX = p.x;
-      this.dragStripX = this.strip.x;
-      this.dragMoved = 0;
-    });
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (!p.isDown || !this.dragging) return;
-      this.dragMoved = Math.max(this.dragMoved, Math.abs(p.x - this.dragStartX));
-      this.strip.x = Phaser.Math.Clamp(this.dragStripX + (p.x - this.dragStartX), this.scrollMin - EDGE, 0);
-    });
-    this.input.on('pointerup', () => {
-      this.dragging = false;
-      this.time.delayedCall(0, () => (this.dragMoved = 0));
     });
   }
 }

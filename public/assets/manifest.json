@@ -78,6 +78,22 @@
   "placeholderColor": "#ff3d8b"
  },
  {
+  "key": "jelly_card",
+  "type": "image",
+  "path": null,
+  "width": 40,
+  "height": 52,
+  "placeholderColor": "#4aa3ff"
+ },
+ {
+  "key": "jelly_rune",
+  "type": "image",
+  "path": null,
+  "width": 128,
+  "height": 128,
+  "placeholderColor": "#8b3dff"
+ },
+ {
   "key": "coin",
   "type": "image",
   "path": null,

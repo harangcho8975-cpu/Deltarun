@@ -124,7 +124,7 @@ export class WorldRenderer {
     this.drawGoal();
     this.pool = new SpritePool(scene, 10);
     // 화면에 동시에 보일 만큼 미리 만들어 둔다
-    const counts: Record<string, number> = { jelly_normal: 70, jelly_big: 6, coin: 8, obstacle_low: 4, obstacle_high: 4, obstacle_air: 4 };
+    const counts: Record<string, number> = { jelly_normal: 80, jelly_big: 6, jelly_card: 6, jelly_rune: 2, coin: 12, obstacle_low: 4, obstacle_high: 4, obstacle_air: 4 };
     for (const [k, n] of Object.entries(counts)) this.pool.prewarm(k, n);
     for (const k of ['item_heal', 'item_magnet', 'item_giant', 'item_boost']) this.pool.prewarm(k, 2);
 

@@ -21,6 +21,8 @@ function sizeOf(kind: EntityKind) {
     case 'obstacle_air':
     case 'jelly_normal':
     case 'jelly_big':
+    case 'jelly_card':
+    case 'jelly_rune':
     case 'coin':
       return hb[kind];
     default:
@@ -79,7 +81,7 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
     boostGroundGrace: 0,
     jellyScore: 0,
     jelliesTaken: 0,
-    jelliesTotal: entities.filter((e) => e.kind === 'jelly_normal' || e.kind === 'jelly_big').length,
+    jelliesTotal: entities.filter((e) => e.kind.startsWith('jelly_')).length,
     coins: 0,
     distance: Math.floor(cameraX / cfg.pxPerMeter),
     entities,

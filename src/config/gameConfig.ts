@@ -37,10 +37,12 @@ export const gameConfig = {
     jelly_normal: { w: 28, h: 28 } as Size,
     coin: { w: 28, h: 28 } as Size,
     jelly_big: { w: 56, h: 56 } as Size,
+    jelly_card: { w: 40, h: 52 } as Size, // 카드 젤리
+    jelly_rune: { w: 128, h: 128 } as Size, // 델타룬 문양 젤리 (무지개곰젤리처럼 큼)
     item: { w: 48, h: 48 } as Size,
   },
 
-  points: { jelly_normal: 10, jelly_big: 100 },
+  points: { jelly_normal: 10, jelly_big: 100, jelly_card: 300, jelly_rune: 3000 },
 
   effects: {
     magnetTicks: 360,
@@ -140,7 +142,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 16;
+export const SIM_VERSION = 17;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {
