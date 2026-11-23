@@ -211,15 +211,18 @@ describe('제빌 스택·비행 속도·능력 중 자력', () => {
 });
 
 describe('제빌 비행 관성 없음·자력 따라오기', () => {
-  it('비행 중 누르면 바로 일정한 속도로 오르고, 떼면 바로 일정한 속도로 내려간다 (관성 없음)', () => {
+  it('비행 중 누르면 바로 일정한 속도로 오르고, 떼면 잠깐 머물렀다가 일정한 속도로 내려간다 (관성 없음)', () => {
     const s = jv();
     toUltimate(s);
     go(s, J.boxPhaseTicks + J.dashTicks, NONE);
     go(s, 10, HOLD); // 천장에 닿기 전까지만 올라간다
     expect(s.player.vy).toBe(-J.flightVy);
     const y0 = s.player.y;
+    go(s, J.flightHoverTicks, NONE);
+    expect(s.player.vy).toBe(0); // 떼고 잠깐은 그 높이에 머문다
+    expect(s.player.y).toBe(y0);
     go(s, 1, NONE);
-    expect(s.player.vy).toBe(J.flightVy); // 떼는 즉시 내려간다
+    expect(s.player.vy).toBe(J.flightVy); // 그 뒤 바로 일정한 속도로 내려간다
     expect(s.player.y).toBeGreaterThan(y0);
     go(s, 1, HOLD);
     expect(s.player.vy).toBe(-J.flightVy);

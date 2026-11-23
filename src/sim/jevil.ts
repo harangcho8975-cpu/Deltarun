@@ -87,7 +87,16 @@ function setPhase(s: SimState, j: JevilState, phase: JevilPhase, events: SimEven
 export function updateFlight(s: SimState): void {
   const p = s.player;
   // 돌진·비행: 누르고 있으면 올라가고, 떼면 내려간다. 관성 없이 바로 일정한 속도로
-  p.vy = p.jumpHeld ? -J.flightVy : J.flightVy;
+  const j = s.jevil!;
+  if (p.jumpHeld) {
+    p.vy = -J.flightVy;
+    j.hover = J.flightHoverTicks; // 떼면 이만큼 머물렀다가 내려간다
+  } else if (j.hover > 0) {
+    j.hover--;
+    p.vy = 0;
+  } else {
+    p.vy = J.flightVy;
+  }
   p.y += p.vy / TICK_RATE;
   if (p.y < J.ceilingY) {
     p.y = J.ceilingY;

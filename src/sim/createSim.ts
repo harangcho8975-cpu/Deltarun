@@ -111,6 +111,7 @@ export function createSim(stage: StageData, opts: CreateSimOptions = {}): SimSta
             phase: 0,
             elapsed: 0,
             swing: 0,
+            hover: 0,
             judged: false,
             slidePrev: false,
             boxes: [],

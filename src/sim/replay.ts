@@ -96,7 +96,7 @@ export function hashState(s: SimState): string {
   if (s.drops.length) parts.push(s.drops.map((d) => `${d.id}:${d.x.toFixed(3)}:${d.y.toFixed(3)}:${d.delay}:${d.age}:${d.settled ? 1 : 0}`).join(','));
   const j = s.jevil;
   if (j) {
-    parts.push(j.stacks, j.timer, j.phase, j.elapsed, j.swing, j.judged ? 1 : 0, j.boxes.map((b) => `${b.id}:${b.t}`).join(','));
+    parts.push(j.stacks, j.timer, j.phase, j.elapsed, j.swing, j.hover, j.judged ? 1 : 0, j.boxes.map((b) => `${b.id}:${b.t}`).join(','));
     parts.push(j.shards.map((x) => `${x.id}:${x.x.toFixed(3)}:${x.y.toFixed(3)}:${x.life}`).join(','));
   }
   let alive = '';

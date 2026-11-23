@@ -120,6 +120,7 @@ export const gameConfig = {
       dashSpeedMul: 2, // 돌진 중 스크롤 속도 배율
       flightTicks: 420, // 비행 7초
       // 돌진·비행 공통: 누르고 있으면 위로, 떼면 아래로 (속도가 부드럽게 바뀐다)
+      flightHoverTicks: 10, // 올라가기를 떼고 내려가기 시작할 때까지 잠깐 멈춰 있는 시간 (0.17초)
       flightVy: 520, // 비행 중 위아래 속도 (px/s). 관성 없이 누르면 바로 이 속도로 오르고, 떼면 바로 내려간다
       flightSpeedMul: 1.5, // 비행 중 스크롤 속도 배율
       ceilingY: 150, // 비행 중 발 y의 최소값 (화면 위로 나가지 않게)
@@ -143,7 +144,7 @@ export type GameConfig = typeof gameConfig;
  * 시뮬레이션 규칙(코드)을 바꿔 같은 입력의 결과가 달라지면 올린다.
  * 리플레이는 이 값과 수치가 모두 같을 때만 유효하다.
  */
-export const SIM_VERSION = 20;
+export const SIM_VERSION = 21;
 
 /** 리플레이가 녹화될 때의 설정·규칙과 지금이 같은지 확인하는 해시. */
 export function configHash(cfg: GameConfig = gameConfig): string {

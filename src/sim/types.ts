@@ -78,6 +78,8 @@ export interface JevilState {
   elapsed: number;
   /** 낫 휘두르기 남은 틱 */
   swing: number;
+  /** 비행: 올라가기를 뗀 뒤 내려가기 전까지 멈춰 있는 남은 틱 */
+  hover: number;
   /** 심판의 섬광이 이미 터졌는가 */
   judged: boolean;
   /** 지난 틱에 슬라이드를 누르고 있었는가 (누르는 순간 판정용) */
